@@ -14,5 +14,8 @@
   "bugs": {
     "url": "https://github.com/imperium-307/Backend/issues"
   },
-  "homepage": "https://github.com/imperium-307/Backend#readme"
+  "homepage": "https://github.com/imperium-307/Backend#readme",
+  "dependencies": {
+    "express": "^4.16.4"
+  }
 }
