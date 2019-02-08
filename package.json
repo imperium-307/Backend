@@ -16,6 +16,7 @@
   },
   "homepage": "https://github.com/imperium-307/Backend#readme",
   "dependencies": {
+    "bcrypt": "^3.0.4",
     "express": "^4.16.4"
   }
 }
