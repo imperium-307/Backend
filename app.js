@@ -10,6 +10,7 @@ dotenv.load({ path: '.env' });
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }));
+
 var config = {
 	apiKey: process.env.FIREBASE_KEY,
 	authDomain: "imperium-ab01e.firebaseapp.com",
