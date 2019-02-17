@@ -14,8 +14,26 @@ var db = admin.firestore();
 var users = db.collection('users')
 
 router.get('/', (req, res, next) => {
-	// TODO firebase interactions for getting the current user based on JWT
-	return res.status(200).json(req.token)
+	if (req.token == null) {
+		// TODO we can throw some errors in here with .json({err: "thing"})
+		res.status(404)
+	} else {
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					// TODO we can throw some errors in here with .json({err: "thing"})
+					return res.status(404)
+				}
+
+				snapshot.forEach(doc => {
+					return res.status(200).json(doc.data())
+				});
+			})
+			.catch(err => {
+				// TODO we can throw some errors in here with .json({err: "thing"})
+				return res.status(401)
+			});
+	}
 })
 
 router.post('/signup', (req, res, next) => {

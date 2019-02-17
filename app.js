@@ -21,6 +21,13 @@ firebase.initializeApp(config);
 
 const rootRouter = require('./routers/index');
 
+app.use(function(req, res, next) {
+	if (req.body.token) {
+		req.token = req.body.token
+	}
+	next()
+})
+
 app.use('/', rootRouter)
 
 app.listen(3000, () => {
