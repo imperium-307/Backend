@@ -15,14 +15,12 @@ var users = db.collection('users')
 
 router.get('/', (req, res, next) => {
 	if (req.token == null) {
-		// TODO we can throw some errors in here with .json({err: "thing"})
-		res.status(404)
+		res.status(401).json({err: "unauthorized"})
 	} else {
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
-					// TODO we can throw some errors in here with .json({err: "thing"})
-					return res.status(404)
+					return res.status(404).json({err: "user profile not found"})
 				}
 
 				snapshot.forEach(doc => {
@@ -30,8 +28,7 @@ router.get('/', (req, res, next) => {
 				});
 			})
 			.catch(err => {
-				// TODO we can throw some errors in here with .json({err: "thing"})
-				return res.status(401)
+				return res.status(500).json({err: "internal server error"})
 			});
 	}
 })
@@ -47,22 +44,19 @@ router.post('/signup', (req, res, next) => {
 
 		// Make sure email is at least x@x.x
 		if (email.length < 5) {
-			// TODO we can throw some errors in here with .json({err: "thing"})
-			return res.status(422)
+			return res.status(422).json({err: "invalid email"})
 		}
 
 		if (password != passwordConfirm) {
-			// TODO we can throw some errors in here with .json({err: "thing"})
-			return res.status(422)
+			return res.status(422).json({err: "passwords do not match"})
 		}
 
 		bcrypt.hash(password, 7, (err, hash) => {
 			if (err) {
-				// TODO we can throw some errors in here with .json({err: "thing"})
 				return res.status(500).json({err: "failed to hash password"})
 			}
 
-			// TODO Setting user/employer field
+			// TODO Setting is user/employer field
 			// Now add user to database
 			users.doc(email).set({
 				email: email,
@@ -89,8 +83,7 @@ router.post('/login', (req, res, next) => {
 		users.where('email', '==', email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
-					// TODO we can throw some errors in here with .json({err: "thing"})
-					return res.status(401)
+					return res.status(401).json({err: "no user associated with that email"})
 				}
 
 				snapshot.forEach(doc => {
@@ -100,14 +93,13 @@ router.post('/login', (req, res, next) => {
 								token: makeJWT(email)
 							})
 						} else {
-							// TODO we can throw some errors in here with .json({err: "thing"})
-							return res.status(403)
+							return res.status(403).json({err: "email or password is incorrect"})
 						}
 					});
 				});
 			})
 			.catch(err => {
-				console.log('Error getting documents', err);
+					return res.status(500).json({err: "internal server error"})
 			});
 
 
