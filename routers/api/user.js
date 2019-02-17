@@ -40,31 +40,42 @@ router.post('/signup', (req, res, next) => {
 		var password = req.body.password
 		var passwordConfirm = req.body.passwordConfirm
 
-		// TODO make sure email is not already in database
+		// See if email is already associated with an account
+		users.where('email', '==', email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					// Make sure email is at least x@x.x
+					if (email.length < 5) {
+						return res.status(422).json({err: "invalid email"})
+					}
 
-		// Make sure email is at least x@x.x
-		if (email.length < 5) {
-			return res.status(422).json({err: "invalid email"})
-		}
+					if (password != passwordConfirm) {
+						return res.status(422).json({err: "passwords do not match"})
+					}
 
-		if (password != passwordConfirm) {
-			return res.status(422).json({err: "passwords do not match"})
-		}
+					bcrypt.hash(password, 7, (err, hash) => {
+						if (err) {
+							return res.status(500).json({err: "failed to hash password"})
+						}
 
-		bcrypt.hash(password, 7, (err, hash) => {
-			if (err) {
-				return res.status(500).json({err: "failed to hash password"})
-			}
+						// TODO Setting is user/employer field
+						// Now add user to database
+						users.doc(email).set({
+							email: email,
+							password: hash
+						})
 
-			// TODO Setting is user/employer field
-			// Now add user to database
-			users.doc(email).set({
-				email: email,
-				password: hash
+						return res.status(200).json({token: makeJWT(email)})
+					})
+				}
+
+				snapshot.forEach(doc => {
+					return res.status(401).json({err: "email already associated with account"})
+				});
 			})
-
-			return res.status(200).json({token: makeJWT(email)})
-		})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
 	} else {
 		// We'll just refresh the token for now...
 		// Depending on the app structure we might want to redirect
@@ -99,7 +110,7 @@ router.post('/login', (req, res, next) => {
 				});
 			})
 			.catch(err => {
-					return res.status(500).json({err: "internal server error"})
+				return res.status(500).json({err: "internal server error"})
 			});
 
 
