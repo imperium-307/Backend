@@ -113,7 +113,6 @@ router.post('/login', (req, res, next) => {
 				return res.status(500).json({err: "internal server error"})
 			});
 
-
 	} else {
 		// We'll just refresh the token for now...
 		// Depending on the app structure we might want to redirect
