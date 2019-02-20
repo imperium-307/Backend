@@ -125,7 +125,7 @@ router.post('/login', (req, res, next) => {
 function makeJWT(email) {
 	return jwt.sign({
 		email: email
-	}, process.env.JWT_SECRET)
+	}, process.env.JWT_SECRET, { expiresIn: process.env.JWT_SESSION_LENGTH })
 }
 
 module.exports = router
