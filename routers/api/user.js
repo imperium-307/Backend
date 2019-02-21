@@ -8,7 +8,7 @@ const functions = require('firebase-functions');
 var serviceAccount = require('../../serviceAccountKey.json');
 
 doCreateUserWithEmailAndPassword = (email, password) =>
-this.auth.createUserWithEmailAndPassword(email, password);
+	this.auth.createUserWithEmailAndPassword(email, password);
 
 admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount),
@@ -65,13 +65,10 @@ router.post('/signup', (req, res, next) => {
 
 						// TODO Setting is user/employer field
 						// Now add user to database
-
-						admin.auth().createUser({
-  						email: email,
-  						password: password,
-						});
-
-
+						users.doc(email).set({
+							email: email,
+							password: hash
+						})
 
 						return res.status(200).json({token: makeJWT(email)})
 					})
