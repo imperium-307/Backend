@@ -15,13 +15,13 @@ app.use(cors())
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }));
 
-var config = {
-	apiKey: process.env.FIREBASE_KEY,
-	authDomain: "imperium-ab01e.firebaseapp.com",
-	databaseURL: "https://imperium-ab01e.firebaseio.com",
-	storageBucket: "imperium-ab01e.appspot.com",
-};
-firebase.initializeApp(config);
+// var config = {
+// 	apiKey: process.env.FIREBASE_KEY,
+// 	authDomain: "imperium-ab01e.firebaseapp.com",
+// 	databaseURL: "https://imperium-ab01e.firebaseio.com",
+// 	storageBucket: "imperium-ab01e.appspot.com",
+// };
+// firebase.initializeApp(config);
 
 const rootRouter = require('./routers/index');
 

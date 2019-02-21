@@ -2,8 +2,13 @@ const router = require('express').Router()
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
+const firebase = require('firebase');
+const functions = require('firebase-functions');
 
 var serviceAccount = require('../../serviceAccountKey.json');
+
+doCreateUserWithEmailAndPassword = (email, password) =>
+this.auth.createUserWithEmailAndPassword(email, password);
 
 admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount),
@@ -60,10 +65,13 @@ router.post('/signup', (req, res, next) => {
 
 						// TODO Setting is user/employer field
 						// Now add user to database
-						users.doc(email).set({
-							email: email,
-							password: hash
-						})
+
+						admin.auth().createUser({
+  						email: email,
+  						password: password,
+						});
+
+
 
 						return res.status(200).json({token: makeJWT(email)})
 					})
