@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
 const firebase = require('firebase');
 const functions = require('firebase-functions');
-const nodemailer = require('nodemailer'); 
+const nodemailer = require('nodemailer');
 
 var serviceAccount = require('../../serviceAccountKey.json');
 
@@ -160,7 +160,7 @@ router.post('/reset', (req, res, next) => {
 					if (err) {
 						return res.status(500).json({err: "internal server error"})
 					}
-				}); 
+				});
 
 				bcrypt.hash(newpass, 7, (err, hash) => {
 					if (err) {
@@ -178,6 +178,15 @@ router.post('/reset', (req, res, next) => {
 		.catch(err => {
 			return res.status(500).json({err: "internal server error"})
 		});
+})
+
+router.post('/delete', (req, res, next) => {
+        if (req.token == null) {
+                return res.status(401).json({err: "unauthorized"})
+        } else {
+                users.doc(req.token.email).delete()
+                return res.send(200)
+        }
 })
 
 function makeJWT(email) {
