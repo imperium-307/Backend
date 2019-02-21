@@ -32,7 +32,7 @@ var transporter = nodemailer.createTransport({
 var db = admin.firestore();
 var users = db.collection('users')
 
-router.get('/', (req, res, next) => {
+router.post('/', (req, res, next) => {
 	if (req.token == null) {
 		res.status(401).json({err: "unauthorized"})
 	} else {
