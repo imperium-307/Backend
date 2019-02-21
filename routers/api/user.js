@@ -53,6 +53,8 @@ router.post('/signup', (req, res, next) => {
 	if (req.token == null) {
 		var email = req.body.email
 		var password = req.body.password
+		var bio = req.body.bio
+		var username  = req.body.username
 		var passwordConfirm = req.body.passwordConfirm
 
 		// See if email is already associated with an account
@@ -76,8 +78,10 @@ router.post('/signup', (req, res, next) => {
 						// TODO Setting is user/employer field
 						// Now add user to database
 						users.doc(email).set({
+							username: username,
 							email: email,
-							password: hash
+							password: hash,
+							bio: bio
 						})
 
 						return res.status(200).json({token: makeJWT(email)})
