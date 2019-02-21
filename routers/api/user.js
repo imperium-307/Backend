@@ -29,7 +29,6 @@ var transporter = nodemailer.createTransport({
 	}
 });
 
-var uEmail
 var db = admin.firestore();
 var users = db.collection('users')
 
@@ -81,7 +80,6 @@ router.post('/signup', (req, res, next) => {
 						}
 
 						try {
-							uEmail = email
 							users.doc(email).set({
 								username: username,
 								email: email,
@@ -128,7 +126,6 @@ router.post('/login', (req, res, next) => {
 				snapshot.forEach(doc => {
 					bcrypt.compare(password, doc.data().password, function(err, isCorrect) {
 						if(isCorrect) {
-							uEmail = email
 							return res.status(200).json({
 								token: makeJWT(email)
 							})
@@ -222,7 +219,7 @@ router.post('/ch-settings', (req, res, next) => {
 			return res.status(422).json({err: "passwords do not match"})
 		}
 
-		var userRef = db.collection('users').doc(uEmail);
+		var userRef = db.collection('users').doc(req.token.email);
 		var getDoc = userRef.get()
 		.then(doc => {
 			if (!doc.exists) {
@@ -244,17 +241,16 @@ router.post('/ch-settings', (req, res, next) => {
 
 			}
 		})
-		.catch(err => {
-			console.log('Error getting document', err);
-		});
-		//need hashed password
+			.catch(err => {
+				console.log('Error getting document', err);
+			});
 
-		if(password != null){
+		if (req.body.password) {
 			bcrypt.hash(password, 7, (err, hash) => {
 				if (err) {
 					return res.status(500).json({err: "failed to hash password"})
 				}
-				users.doc(uEmail).update({
+				users.doc(req.token.email).update({
 					email: email,
 					password: hash,
 					bio:  bio,
@@ -262,15 +258,14 @@ router.post('/ch-settings', (req, res, next) => {
 				})
 				return res.status(200).json({token: makeJWT(email)})
 			})
+		} else {
+			users.doc(req.token.email).update({
+				email: email,
+				bio:  bio,
+				username: username
+			})
 		}
-	} else {
-		// We'll just refresh the token for now...
-		// Depending on the app structure we might want to redirect
-		return res.status(200).json({
-			token: makeJWT(req.token.email)
-		})
-	}
-
+	} 
 })
 
 function makeJWT(email) {
