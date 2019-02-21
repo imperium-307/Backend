@@ -178,7 +178,7 @@ router.post('/reset', (req, res, next) => {
 						password: hash
 					})
 
-					return res.send(200)
+					return res.sendStatus(200)
 				})
 			});
 		})
