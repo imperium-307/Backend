@@ -175,7 +175,7 @@ router.post('/reset', (req, res, next) => {
 						password: hash
 					})
 
-					return res.send(200)
+					return res.sendStatus(200)
 				})
 			});
 		})
@@ -189,7 +189,7 @@ router.post('/delete', (req, res, next) => {
                 return res.status(401).json({err: "unauthorized"})
         } else {
                 users.doc(req.token.email).delete()
-                return res.send(200)
+                return res.sendStatus(200)
         }
 })
 
