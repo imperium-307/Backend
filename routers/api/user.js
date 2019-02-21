@@ -29,6 +29,7 @@ var transporter = nodemailer.createTransport({
 	}
 });
 
+var uEmail
 var db = admin.firestore();
 var users = db.collection('users')
 
@@ -80,6 +81,7 @@ router.post('/signup', (req, res, next) => {
 						}
 
 						try {
+							uEmail = email
 							users.doc(email).set({
 								username: username,
 								email: email,
@@ -126,6 +128,7 @@ router.post('/login', (req, res, next) => {
 				snapshot.forEach(doc => {
 					bcrypt.compare(password, doc.data().password, function(err, isCorrect) {
 						if(isCorrect) {
+							uEmail = email
 							return res.status(200).json({
 								token: makeJWT(email)
 							})
@@ -198,6 +201,67 @@ router.post('/delete', (req, res, next) => {
 		users.doc(req.token.email).delete()
 		return res.send(200)
 	}
+})
+
+router.post('/ch-settings', (req, res, next) => {
+
+	if (req.token != null) {
+		var email = req.body.email
+		var password = req.body.password
+		var passwordConfirm = req.body.passwordConfirm
+		var username = req.body.username
+		var bio = req.body.bio
+		//		var username = req.body.username
+		// See if email is already associated with an account
+		var userRef = db.collection('users').doc(uEmail);
+		var getDoc = userRef.get()
+		.then(doc => {
+			if (!doc.exists) {
+				console.log('No such document!');
+			} else {
+				//check if null, if not we do this for the rest as well
+				if(password == null){
+					password = doc().password
+				}
+				if(email == null){
+					email = doc().email
+				}
+				if(username == null){
+					username = doc().username
+				}
+				if(bio == null){
+					bio = doc().bio
+				}
+
+			}
+		})
+		.catch(err => {
+			console.log('Error getting document', err);
+		});
+		//need hashed password
+
+		if(password != null){
+			bcrypt.hash(password, 7, (err, hash) => {
+				if (err) {
+					return res.status(500).json({err: "failed to hash password"})
+				}
+				users.doc(uEmail).update({
+					email: email,
+					password: hash,
+					bio:  bio,
+					username: username
+				})
+				return res.status(200).json({token: makeJWT(email)})
+			})
+		}
+	} else {
+		// We'll just refresh the token for now...
+		// Depending on the app structure we might want to redirect
+		return res.status(200).json({
+			token: makeJWT(req.token.email)
+		})
+	}
+
 })
 
 function makeJWT(email) {
