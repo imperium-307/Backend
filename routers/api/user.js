@@ -75,14 +75,17 @@ router.post('/signup', (req, res, next) => {
 							return res.status(500).json({err: "failed to hash password"})
 						}
 
-						// TODO Setting is user/employer field
-						// Now add user to database
-						users.doc(email).set({
-							username: username,
-							email: email,
-							password: hash,
-							bio: bio
-						})
+						try {
+							users.doc(email).set({
+								username: username,
+								email: email,
+								password: hash,
+								bio: bio
+							})
+						}
+						catch(err) {
+							return res.status(500).json({err: "internal server error"})
+						}
 
 						return res.status(200).json({token: makeJWT(email)})
 					})
@@ -185,12 +188,12 @@ router.post('/reset', (req, res, next) => {
 })
 
 router.post('/delete', (req, res, next) => {
-        if (req.token == null) {
-                return res.status(401).json({err: "unauthorized"})
-        } else {
-                users.doc(req.token.email).delete()
-                return res.send(200)
-        }
+	if (req.token == null) {
+		return res.status(401).json({err: "unauthorized"})
+	} else {
+		users.doc(req.token.email).delete()
+		return res.send(200)
+	}
 })
 
 function makeJWT(email) {
