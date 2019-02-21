@@ -213,6 +213,15 @@ router.post('/ch-settings', (req, res, next) => {
 		var bio = req.body.bio
 		//		var username = req.body.username
 		// See if email is already associated with an account
+
+		if (email.length < 5) {
+			return res.status(422).json({err: "invalid email"})
+		}
+
+		if (password != passwordConfirm) {
+			return res.status(422).json({err: "passwords do not match"})
+		}
+
 		var userRef = db.collection('users').doc(uEmail);
 		var getDoc = userRef.get()
 		.then(doc => {
