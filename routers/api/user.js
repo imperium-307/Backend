@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
 const firebase = require('firebase');
 const functions = require('firebase-functions');
+const nodemailer = require('nodemailer'); 
 
 var serviceAccount = require('../../serviceAccountKey.json');
 
@@ -13,6 +14,15 @@ doCreateUserWithEmailAndPassword = (email, password) =>
 admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount),
 	databaseURL: "https://imperium-ab01e.firebaseio.com"
+});
+
+
+var transporter = nodemailer.createTransport({
+	service: 'gmail',
+	auth: {
+		user: 'imperium397@gmail.com',
+		pass: process.env.GMAIL_PASS
+	}
 });
 
 var db = admin.firestore();
@@ -125,6 +135,49 @@ router.post('/login', (req, res, next) => {
 			token: makeJWT(email)
 		})
 	}
+})
+
+router.post('/reset', (req, res, next) => {
+	var email = req.body.email
+
+	users.where('email', '==', email).get()
+		.then(snapshot => {
+			if (snapshot.empty) {
+				return res.status(401).json({err: "no user associated with that email"})
+			}
+
+			snapshot.forEach(doc => {
+				var newpass = Math.random().toString(36).substring(2, 15);
+
+				opt = {
+					from: 'imperium397@gmail.com',
+					to: email,
+					subject: 'Password reset request from Imperium',
+					text: 'Your new password is ' + newpass + ', don\'t go losing it again.'
+				}
+
+				transporter.sendMail(opt, function(err, r){
+					if (err) {
+						return res.status(500).json({err: "internal server error"})
+					}
+				}); 
+
+				bcrypt.hash(newpass, 7, (err, hash) => {
+					if (err) {
+						return res.status(500).json({err: "failed to hash password"})
+					}
+
+					users.doc(email).update({
+						password: hash
+					})
+
+					return res.send(200)
+				})
+			});
+		})
+		.catch(err => {
+			return res.status(500).json({err: "internal server error"})
+		});
 })
 
 function makeJWT(email) {
