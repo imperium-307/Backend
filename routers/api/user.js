@@ -19,6 +19,10 @@ admin.initializeApp({
 
 var transporter = nodemailer.createTransport({
 	service: 'gmail',
+	secure: false,
+	tls: {
+		rejectUnauthorized: false
+	},
 	auth: {
 		user: 'imperium397@gmail.com',
 		pass: process.env.GMAIL_PASS
