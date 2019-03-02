@@ -268,6 +268,29 @@ router.post('/ch-settings', (req, res, next) => {
 	} 
 })
 
+router.get('/view/:email', (req, res, next) => {
+	if (req.token == null) {
+		// You must be logged in to view other's profiles
+		res.status(401).json({err: "unauthorized"})
+	} else {
+		users.where('email', '==', req.params.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "user profile not found"})
+				}
+
+				snapshot.forEach(doc => {
+					ret = doc.data();
+					delete ret.password;
+					return res.status(200).json(ret)
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+	}
+})
+
 function makeJWT(email) {
 	return jwt.sign({
 		email: email
