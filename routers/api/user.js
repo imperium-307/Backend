@@ -201,15 +201,13 @@ router.post('/delete', (req, res, next) => {
 })
 
 router.post('/ch-settings', (req, res, next) => {
-
 	if (req.token != null) {
 		var email = req.body.email
 		var password = req.body.password
 		var passwordConfirm = req.body.passwordConfirm
 		var username = req.body.username
 		var bio = req.body.bio
-		//		var username = req.body.username
-		// See if email is already associated with an account
+		var education = req.body.education
 
 		if (email.length < 5) {
 			return res.status(422).json({err: "invalid email"})
@@ -238,7 +236,9 @@ router.post('/ch-settings', (req, res, next) => {
 				if(bio == null){
 					bio = doc().bio
 				}
-
+				if(education == null) {
+					education = doc().education
+				}
 			}
 		})
 			.catch(err => {
@@ -254,7 +254,8 @@ router.post('/ch-settings', (req, res, next) => {
 					email: email,
 					password: hash,
 					bio:  bio,
-					username: username
+					username: username,
+					education: education
 				})
 				return res.status(200).json({token: makeJWT(email)})
 			})
@@ -262,7 +263,8 @@ router.post('/ch-settings', (req, res, next) => {
 			users.doc(req.token.email).update({
 				email: email,
 				bio:  bio,
-				username: username
+				username: username,
+				education: education
 			})
 		}
 	} 
