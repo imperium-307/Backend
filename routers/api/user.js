@@ -187,6 +187,48 @@ router.post('/reset', (req, res, next) => {
 		});
 })
 
+router.post('/unmatch', (req, res, next) => {
+	// TODO update name this depending on what @frontend sets it to
+	var matchee = req.body.matchee
+	users.where('email', '==', req.token.email).get()
+		.then(snapshot => {
+			if (snapshot.empty) {
+				return res.status(401).json({err: "no user associated with that email"})
+			}
+
+			snapshot.forEach(doc => {
+				user = doc.data();
+				if (user.matches == null) {
+					user.matches = [matchee];
+				} else {
+					user.matches.push(matchee);
+				}
+
+				if (user.history == null) {
+					user.history = [{
+						action: "match",
+						date: Date.now(),
+						data: matchee
+					}];
+				} else {
+					user.history.push({
+						action: "match",
+						date: Date.now(),
+						data: matchee
+					});
+				}
+
+				users.doc(email).update({
+					matches: user.matches,
+					history: user.history
+				})
+			});
+		})
+		.catch(err => {
+			return res.status(500).json({err: "internal server error"})
+		});
+})
+
 router.post('/delete', (req, res, next) => {
 	if (req.token == null) {
 		return res.status(401).json({err: "unauthorized"})
@@ -215,28 +257,28 @@ router.post('/ch-settings', (req, res, next) => {
 
 		var userRef = db.collection('users').doc(req.token.email);
 		var getDoc = userRef.get()
-		.then(doc => {
-			if (!doc.exists) {
-				console.log('No such document!');
-			} else {
-				//check if null, if not we do this for the rest as well
-				if(password == null){
-					password = doc().password
+			.then(doc => {
+				if (!doc.exists) {
+					console.log('No such document!');
+				} else {
+					//check if null, if not we do this for the rest as well
+					if(password == null){
+						password = doc().password
+					}
+					if(email == null){
+						email = doc().email
+					}
+					if(username == null){
+						username = doc().username
+					}
+					if(bio == null){
+						bio = doc().bio
+					}
+					if(education == null) {
+						education = doc().education
+					}
 				}
-				if(email == null){
-					email = doc().email
-				}
-				if(username == null){
-					username = doc().username
-				}
-				if(bio == null){
-					bio = doc().bio
-				}
-				if(education == null) {
-					education = doc().education
-				}
-			}
-		})
+			})
 			.catch(err => {
 				console.log('Error getting document', err);
 			});
