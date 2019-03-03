@@ -8,14 +8,10 @@ const nodemailer = require('nodemailer');
 
 var serviceAccount = require('../../serviceAccountKey.json');
 
-doCreateUserWithEmailAndPassword = (email, password) =>
-	this.auth.createUserWithEmailAndPassword(email, password);
-
 admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount),
 	databaseURL: "https://imperium-ab01e.firebaseio.com"
 });
-
 
 var transporter = nodemailer.createTransport({
 	service: 'gmail',
