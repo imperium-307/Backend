@@ -305,7 +305,51 @@ router.post('/ch-settings', (req, res, next) => {
 				education: education
 			})
 		}
-	} 
+	}
+})
+
+router.get('/setResume', (req, res, next) => {
+
+	if(req.token == null){
+		res.status(401).json({err: "unauthorized"})
+	}else{
+
+
+//way one
+		// Create a reference to the file you want to download
+		let pdfRef = storageRef.child("users/userReq/resume.pdf")
+
+		// Create local filesystem URL
+		let localURL = URL(string: "path/to/local/file.pdf")!
+
+		// Download to the local filesystem
+		let downloadTask = pdfRef.write(toFile: localURL) { url, error in
+		  if let error = error {
+		    // Uh-oh, an error occurred!
+		  } else {
+		    // Local file URL for "path/to/local/file.pdf" is returned
+		  }
+		}
+
+		//way two
+		// Create a root reference
+var storageRef = firebase.storage().ref();
+
+// Create a reference to 'mountains.jpg'
+var mountainsRef = storageRef.child('resume.pdf');
+
+// Create a reference to 'images/mountains.jpg'
+var mountainImagesRef = storageRef.child('users/userReq/mountains.jpg');
+
+// While the file names are the same, the references point to different files
+mountainsRef.name === mountainImagesRef.name            // true
+mountainsRef.fullPath === mountainImagesRef.fullPath    // false
+
+
+
+	}
+
+
 })
 
 router.get('/view/:email', (req, res, next) => {
