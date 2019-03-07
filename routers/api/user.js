@@ -56,6 +56,7 @@ router.post('/signup', (req, res, next) => {
 		var bio = req.body.bio
 		var username  = req.body.username
 		var passwordConfirm = req.body.passwordConfirm
+		var persona  = req.body.persona 
 
 		// See if email is already associated with an account
 		users.where('email', '==', email).get()
@@ -76,16 +77,31 @@ router.post('/signup', (req, res, next) => {
 						}
 
 						try {
-							users.doc(email).set({
-								username: username,
-								email: email,
-								password: hash,
-								bio: bio
+							if (persona == "student") {
+								users.doc(email).set({
+									username: username,
+									email: email,
+									password: hash,
+									bio: bio,
+									persona: persona,
+									internship: req.body.internship,
+									coop: req.body.coop,
+									fullTime: req.body.fullTime
+								})
+							} else if (persona == "employer") {
+								users.doc(email).set({
+									username: username,
+									email: email,
+									password: hash,
+									bio: bio,
+									persona: persona,
+									jobType: req.body.jobType
 							})
 						}
 						catch(err) {
 							return res.status(500).json({err: "internal server error"})
 						}
+
 
 						return res.status(200).json({token: makeJWT(email)})
 					})
@@ -308,6 +324,7 @@ router.post('/ch-settings', (req, res, next) => {
 	}
 })
 
+/*
 router.get('/setResume', (req, res, next) => {
 
 	if(req.token == null){
@@ -315,27 +332,27 @@ router.get('/setResume', (req, res, next) => {
 	}else{
 
 
-//way one
+		//way one
 		// Create a reference to the file you want to download
 		let pdfRef = storageRef.child("users/userReq/resume.pdf")
 
 		// Create local filesystem URL
 		let localURL = URL(string: "path/to/local/file.pdf")!
 
-		// Download to the local filesystem
+			// Download to the local filesystem
 		let downloadTask = pdfRef.write(toFile: localURL) { url, error in
-		  if let error = error {
-		    // Uh-oh, an error occurred!
-		  } else {
-		    // Local file URL for "path/to/local/file.pdf" is returned
-		  }
+			if let error = error {
+				// Uh-oh, an error occurred!
+			} else {
+				// Local file URL for "path/to/local/file.pdf" is returned
+			}
 		}
 
 		//way two
 		// Create a root reference
 var storageRef = firebase.storage().ref();
 
-// Create a reference to 'mountains.jpg'
+		// Create a reference to 'mountains.jpg'
 var mountainsRef = storageRef.child('resume.pdf');
 
 // Create a reference to 'images/mountains.jpg'
@@ -351,6 +368,7 @@ mountainsRef.fullPath === mountainImagesRef.fullPath    // false
 
 
 })
+*/
 
 router.get('/view/:email', (req, res, next) => {
 	if (req.token == null) {
