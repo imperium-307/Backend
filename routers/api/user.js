@@ -96,9 +96,9 @@ router.post('/signup', (req, res, next) => {
 									bio: bio,
 									persona: persona,
 									jobType: req.body.jobType
-							})
-						}
-						catch(err) {
+								})
+							}
+						} catch(err) {
 							return res.status(500).json({err: "internal server error"})
 						}
 
@@ -256,71 +256,52 @@ router.post('/delete', (req, res, next) => {
 
 router.post('/ch-settings', (req, res, next) => {
 	if (req.token != null) {
-		var email = req.body.email
-		var password = req.body.password
-		var passwordConfirm = req.body.passwordConfirm
-		var username = req.body.username
-		var bio = req.body.bio
-		var education = req.body.education
 
-		if (email.length < 5) {
+		if (req.body.email && req.body.email.length < 5) {
 			return res.status(422).json({err: "invalid email"})
 		}
 
-		if (password != passwordConfirm) {
+		if (req.body.password && req.body.confirmPassword && 
+			req.body.password != req.body.passwordConfirm) {
 			return res.status(422).json({err: "passwords do not match"})
 		}
 
+		var u;
 		var userRef = db.collection('users').doc(req.token.email);
 		var getDoc = userRef.get()
 			.then(doc => {
 				if (!doc.exists) {
 					console.log('No such document!');
 				} else {
-					//check if null, if not we do this for the rest as well
-					if(password == null){
-						password = doc().password
+					u = doc.data()
+
+					if (req.body.password) {
+						bcrypt.hash(req.body.password, 7, (err, hash) => {
+							if (err) {
+								return res.status(500).json({err: "failed to hash password"})
+							}
+							req.body.password = null;
+							req.body.passwordConfirm = null;
+
+							u.password = hash
+						})
 					}
-					if(email == null){
-						email = doc().email
+
+					for (var key in req.body) {
+						if (req.body[key] != null && key != "password" && key != "passwordConfirm" && key != "token") {
+							u[key] = req.body[key]
+						}
 					}
-					if(username == null){
-						username = doc().username
-					}
-					if(bio == null){
-						bio = doc().bio
-					}
-					if(education == null) {
-						education = doc().education
-					}
+
+					users.doc(req.token.email).update(u)
+
+					return res.status(200).json({ok: true})
 				}
 			})
 			.catch(err => {
 				console.log('Error getting document', err);
+				return res.status(500).json({err: "internal server error"})
 			});
-
-		if (req.body.password) {
-			bcrypt.hash(password, 7, (err, hash) => {
-				if (err) {
-					return res.status(500).json({err: "failed to hash password"})
-				}
-				users.doc(req.token.email).update({
-					email: email,
-					password: hash,
-					bio:  bio,
-					username: username,
-					education: education
-				})
-				return res.status(200).json({token: makeJWT(email)})
-			})
-		} else {
-			users.doc(req.token.email).update({
-				email: email,
-				bio:  bio,
-				username: username,
-				education: education
-			})
-		}
 	}
 })
 
