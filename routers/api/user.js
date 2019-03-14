@@ -84,9 +84,9 @@ router.post('/signup', (req, res, next) => {
 									password: hash,
 									bio: bio,
 									persona: persona,
-									internship: req.body.internship,
-									coop: req.body.coop,
-									fullTime: req.body.fullTime
+									internship: (req.body.internship || null),
+									coop: (req.body.coop || null),
+									fullTime: (req.body.fullTime || null)
 								})
 							} else if (persona == "employer") {
 								users.doc(email).set({
@@ -101,7 +101,6 @@ router.post('/signup', (req, res, next) => {
 						} catch(err) {
 							return res.status(500).json({err: "internal server error"})
 						}
-
 
 						return res.status(200).json({token: makeJWT(email)})
 					})
@@ -155,7 +154,7 @@ router.post('/login', (req, res, next) => {
 		// We'll just refresh the token for now...
 		// Depending on the app structure we might want to redirect
 		return res.status(200).json({
-			token: makeJWT(email)
+			token: makeJWT(req.token.email)
 		})
 	}
 })
@@ -203,46 +202,112 @@ router.post('/reset', (req, res, next) => {
 		});
 })
 
-router.post('/unmatch', (req, res, next) => {
-	// TODO update name this depending on what @frontend sets it to
-	var matchee = req.body.matchee
-	users.where('email', '==', req.token.email).get()
-		.then(snapshot => {
-			if (snapshot.empty) {
-				return res.status(401).json({err: "no user associated with that email"})
-			}
-
-			snapshot.forEach(doc => {
-				user = doc.data();
-				if (user.matches == null) {
-					user.matches = [matchee];
-				} else {
-					user.matches.push(matchee);
+router.post('/match', (req, res, next) => {
+	if (req.token != null) {
+		// TODO update this depending on what @frontend sets it to
+		var matchee = req.body.matchee
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(401).json({err: "no user associated with that email"})
 				}
 
-				if (user.history == null) {
-					user.history = [{
-						action: "match",
-						date: Date.now(),
-						data: matchee
-					}];
-				} else {
-					user.history.push({
-						action: "match",
-						date: Date.now(),
-						data: matchee
-					});
-				}
+				snapshot.forEach(doc => {
+					user = doc.data();
 
-				users.doc(email).update({
-					matches: user.matches,
-					history: user.history
-				})
+					if (user.matches == null) {
+						user.matches = [];
+					}
+
+					if (!user.matches.includes(matchee)) {
+						user.matches.push(matchee);
+
+						if (user.history == null) {
+							user.history = [{
+								action: "match",
+								date: Date.now(),
+								data: matchee
+							}];
+						} else {
+							user.history.push({
+								action: "match",
+								date: Date.now(),
+								data: matchee
+							});
+						}
+
+						users.doc(req.token.email).update({
+							matches: user.matches,
+							history: user.history
+						})
+
+						return res.status(200).json({ok: true})
+					}
+
+					return res.status(401).json({err: "already matched"})
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
 			});
-		})
-		.catch(err => {
-			return res.status(500).json({err: "internal server error"})
-		});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
+router.post('/unmatch', (req, res, next) => {
+	if (req.token != null) {
+		// TODO update this depending on what @frontend sets it to
+		var matchee = req.body.matchee
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(401).json({err: "no user associated with that email"})
+				}
+
+				snapshot.forEach(doc => {
+					user = doc.data();
+
+					if (user.matches == null) {
+						user.matches = [];
+					}
+
+					if (user.matches.includes(matchee)) {
+						// Remove from user's matches
+						user.matches = user.matches.filter(e => e !== matchee)
+
+						// It really shouldn't ever be null, but just to be safe
+						if (user.history == null) {
+							user.history = [{
+								action: "unmatch",
+								date: Date.now(),
+								data: matchee
+							}];
+						} else {
+							user.history.push({
+								action: "unmatch",
+								date: Date.now(),
+								data: matchee
+							});
+						}
+
+						users.doc(req.token.email).update({
+							matches: user.matches,
+							history: user.history
+						})
+
+						return res.status(200).json({ok: true})
+					} else {
+						return res.status(401).json({err: "not matched yet"})
+					}
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
 })
 
 router.post('/delete', (req, res, next) => {
