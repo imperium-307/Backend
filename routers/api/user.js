@@ -5,6 +5,8 @@ const admin = require('firebase-admin');
 const firebase = require('firebase');
 const functions = require('firebase-functions');
 const nodemailer = require('nodemailer');
+const fileUpload = require('express-fileupload')
+const fs = require('fs')
 
 var serviceAccount = require('../../serviceAccountKey.json');
 
@@ -39,7 +41,8 @@ router.post('/', (req, res, next) => {
 				}
 
 				snapshot.forEach(doc => {
-					return res.status(200).json(doc.data())
+					var user = doc.data()
+					return res.status(200).json(user)
 				});
 			})
 			.catch(err => {
@@ -77,6 +80,25 @@ router.post('/signup', (req, res, next) => {
 						}
 
 						try {
+							u = {}
+
+							for (var key in req.body) {
+								if (req.body[key] != null && key != "passwordConfirm" && key != "token") {
+									u[key] = req.body[key]
+								}
+							}
+
+							users.doc(email).set(u)
+
+							// The if statement below is the old way we did tihngs
+							// We now do the for loop above and set all the fields we were given
+							// in the request, so we don't have to keep updating this endpoint we
+							// can just change what we're sending on signup and account updating
+							// and it will all be handled generically.  I think this should work
+							// for every case, but let me know if this starts causing problems.
+							// - CJ
+
+							/*
 							if (persona == "student") {
 								users.doc(email).set({
 									username: username,
@@ -98,6 +120,7 @@ router.post('/signup', (req, res, next) => {
 									jobType: req.body.jobType
 								})
 							}
+							*/
 						} catch(err) {
 							return res.status(500).json({err: "internal server error"})
 						}
@@ -370,73 +393,41 @@ router.post('/ch-settings', (req, res, next) => {
 	}
 })
 
-/*
-router.get('/setResume', (req, res, next) => {
-
+router.post('/ch-resume', (req, res, next) => {
 	if(req.token == null){
 		res.status(401).json({err: "unauthorized"})
-	}else{
-
-
-		//way one
-		// Create a reference to the file you want to download
-		let pdfRef = storageRef.child("users/userReq/resume.pdf")
-
-		// Create local filesystem URL
-		let localURL = URL(string: "path/to/local/file.pdf")!
-
-			// Download to the local filesystem
-		let downloadTask = pdfRef.write(toFile: localURL) { url, error in
-			if let error = error {
-				// Uh-oh, an error occurred!
-			} else {
-				// Local file URL for "path/to/local/file.pdf" is returned
-			}
-		}
-
-		//way two
-		// Create a root reference
-var storageRef = firebase.storage().ref();
-
-		// Create a reference to 'mountains.jpg'
-var mountainsRef = storageRef.child('resume.pdf');
-
-// Create a reference to 'images/mountains.jpg'
-var mountainImagesRef = storageRef.child('users/userReq/mountains.jpg');
-
-// While the file names are the same, the references point to different files
-mountainsRef.name === mountainImagesRef.name            // true
-mountainsRef.fullPath === mountainImagesRef.fullPath    // false
-
-
-
-	}
-
-
-})
-*/
-
-router.get('/view/:email', (req, res, next) => {
-	if (req.token == null) {
-		// You must be logged in to view other's profiles
-		res.status(401).json({err: "unauthorized"})
 	} else {
-		users.where('email', '==', req.params.email).get()
-			.then(snapshot => {
-				if (snapshot.empty) {
-					return res.status(404).json({err: "user profile not found"})
+		var file = req.files.file
+
+		uploadFile.mv(
+			`${__dirname}/../../resumes/` + req.token.email + `.pdf`,
+			function (err) {
+				if (err) {
+					return res.status(500).send({err: "error uploading resume"})
 				}
 
-				snapshot.forEach(doc => {
-					ret = doc.data();
-					delete ret.password;
-					return res.status(200).json(ret)
-				});
-			})
-			.catch(err => {
-				return res.status(500).json({err: "internal server error"})
-			});
+				res.status(200).json({ok: true})
+			}
+		)
 	}
+})
+
+router.get('/view/:email', (req, res, next) => {
+	users.where('email', '==', req.params.email).get()
+		.then(snapshot => {
+			if (snapshot.empty) {
+				return res.status(404).json({err: "user profile not found"})
+			}
+
+			snapshot.forEach(doc => {
+				ret = doc.data();
+				delete ret.password;
+				return res.status(200).json(ret)
+			});
+		})
+		.catch(err => {
+			return res.status(500).json({err: "internal server error"})
+		});
 })
 
 function makeJWT(email) {
