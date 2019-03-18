@@ -393,23 +393,20 @@ router.post('/ch-settings', (req, res, next) => {
 	}
 })
 
-router.post('/ch-resume', (req, res, next) => {
-	if(req.token == null){
-		res.status(401).json({err: "unauthorized"})
-	} else {
-		var file = req.files.file
+router.post('/ch-resume/:email', (req, res, next) => {
+	var file = req.files.file
+	console.log(req.files.file)
 
-		uploadFile.mv(
-			`${__dirname}/../../resumes/` + req.token.email + `.pdf`,
-			function (err) {
-				if (err) {
-					return res.status(500).send({err: "error uploading resume"})
-				}
-
-				res.status(200).json({ok: true})
+	file.mv(
+		`${__dirname}/../../resumes/` + req.params.email + `.pdf`,
+		function (err) {
+			if (err) {
+				return res.status(500).send({err: "error uploading resume"})
 			}
-		)
-	}
+
+			res.status(200).json({ok: true})
+		}
+	)
 })
 
 router.get('/view/:email', (req, res, next) => {
