@@ -352,6 +352,120 @@ router.post('/dislike', (req, res, next) => {
 	}
 })
 
+router.post('/favorite', (req, res, next) => {
+	if (req.token != null) {
+		// TODO update this depending on what @frontend sets it to
+		var favoritee = req.body.favoritee
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(401).json({err: "no user associated with that email"})
+				}
+
+				snapshot.forEach(doc => {
+					user = doc.data();
+
+					if (user.favorites == null) {
+						user.favorites = [];
+					}
+
+					if (!user.favorites.includes(favoritee)) {
+						if (user.favorites.length >= 3) {
+							return res.status(401).json({err: "max favorites reached"})
+						} else {
+							user.favorites.push(favoritee);
+
+							if (user.history == null) {
+								user.history = [{
+									action: "favorite",
+									date: Date.now(),
+									data: favoritee
+								}];
+							} else {
+								user.history.push({
+									action: "favorite",
+									date: Date.now(),
+									data: favoritee
+								});
+							}
+
+							users.doc(req.token.email).update({
+								favorites: user.favorites,
+								history: user.history
+							})
+
+							return res.status(200).json({ok: true})
+						}
+					}
+
+					return res.status(401).json({err: "already favorited"})
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
+router.post('/unfavorite', (req, res, next) => {
+	if (req.token != null) {
+		// TODO update this depending on what @frontend sets it to
+		var favoritee = req.body.favoritee
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(401).json({err: "no user associated with that email"})
+				}
+
+				snapshot.forEach(doc => {
+					user = doc.data();
+
+					if (user.favorites == null) {
+						user.favorites = [];
+					}
+
+					if (user.favorites.includes(favoritee)) {
+						if (user.favorites.length >= 3) {
+							return res.status(401).json({err: "max favorites reached"})
+						} else {
+							user.favorites = user.favorites.filter(e => e !== favoritee)
+
+							if (user.history == null) {
+								user.history = [{
+									action: "unfavorite",
+									date: Date.now(),
+									data: favoritee
+								}];
+							} else {
+								user.history.push({
+									action: "unfavorite",
+									date: Date.now(),
+									data: favoritee
+								});
+							}
+
+							users.doc(req.token.email).update({
+								favorites: user.favorites,
+								history: user.history
+							})
+
+							return res.status(200).json({ok: true})
+						}
+					}
+
+					return res.status(401).json({err: "not yet favorited"})
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
 router.post('/delete', (req, res, next) => {
 	if (req.token == null) {
 		return res.status(401).json({err: "unauthorized"})
