@@ -225,10 +225,10 @@ router.post('/reset', (req, res, next) => {
 		});
 })
 
-router.post('/match', (req, res, next) => {
+router.post('/like', (req, res, next) => {
 	if (req.token != null) {
 		// TODO update this depending on what @frontend sets it to
-		var matchee = req.body.matchee
+		var likee = req.body.likee
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
@@ -238,36 +238,47 @@ router.post('/match', (req, res, next) => {
 				snapshot.forEach(doc => {
 					user = doc.data();
 
-					if (user.matches == null) {
-						user.matches = [];
+					if (user.likes == null) {
+						user.likes = [];
 					}
 
-					if (!user.matches.includes(matchee)) {
-						user.matches.push(matchee);
+					if (!user.likes.includes(likee)) {
+						user.likes.push(likee);
 
 						if (user.history == null) {
 							user.history = [{
-								action: "match",
+								action: "like",
 								date: Date.now(),
-								data: matchee
+								data: likee
 							}];
 						} else {
 							user.history.push({
-								action: "match",
+								action: "like",
 								date: Date.now(),
-								data: matchee
+								data: likee
 							});
 						}
 
+						// If the person was disliked before, remove them from dislikes
+						if (user.dislikes && user.dislikes.includes(likee)) {
+							var i = user.dislikes.indexOf(likee);
+							if (i > -1) {
+								user.dislikes.splice(i, 1);
+							}
+						} else if (!user.dislikes) {
+							user.dislikes = [];
+						}
+
 						users.doc(req.token.email).update({
-							matches: user.matches,
+							likes: user.likes,
+							dislikes: user.dislikes,
 							history: user.history
 						})
 
 						return res.status(200).json({ok: true})
 					}
 
-					return res.status(401).json({err: "already matched"})
+					return res.status(401).json({err: "already liked"})
 				});
 			})
 			.catch(err => {
@@ -278,10 +289,10 @@ router.post('/match', (req, res, next) => {
 	}
 })
 
-router.post('/unmatch', (req, res, next) => {
+router.post('/dislike', (req, res, next) => {
 	if (req.token != null) {
 		// TODO update this depending on what @frontend sets it to
-		var matchee = req.body.matchee
+		var likee = req.body.likee
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
@@ -291,37 +302,45 @@ router.post('/unmatch', (req, res, next) => {
 				snapshot.forEach(doc => {
 					user = doc.data();
 
-					if (user.matches == null) {
-						user.matches = [];
+					if (user.dislikes == null) {
+						user.dislikes = [];
 					}
 
-					if (user.matches.includes(matchee)) {
-						// Remove from user's matches
-						user.matches = user.matches.filter(e => e !== matchee)
-
-						// It really shouldn't ever be null, but just to be safe
+					if (!user.dislikes.includes(likee)) {
+						user.dislikes.push(likee)
 						if (user.history == null) {
 							user.history = [{
-								action: "unmatch",
+								action: "dislike",
 								date: Date.now(),
-								data: matchee
+								data: likee 
 							}];
 						} else {
 							user.history.push({
-								action: "unmatch",
+								action: "dislike",
 								date: Date.now(),
-								data: matchee
+								data: likee 
 							});
 						}
 
+						// If the person was disliked before, remove them from dislikes
+						if (user.likes && user.likes.includes(likee)) {
+							var i = user.likes.indexOf(likee);
+							if (i > -1) {
+								user.likes.splice(i, 1);
+							}
+						} else if (!user.likes) {
+							user.likes = [];
+						}
+
 						users.doc(req.token.email).update({
-							matches: user.matches,
+							dislikes: user.dislikes,
+							likes: user.likes,
 							history: user.history
 						})
 
 						return res.status(200).json({ok: true})
 					} else {
-						return res.status(401).json({err: "not matched yet"})
+						return res.status(401).json({err: "already disliked"})
 					}
 				});
 			})
