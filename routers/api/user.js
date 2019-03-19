@@ -83,10 +83,12 @@ router.post('/signup', (req, res, next) => {
 							u = {}
 
 							for (var key in req.body) {
-								if (req.body[key] != null && key != "passwordConfirm" && key != "token") {
+								if (req.body[key] != null && key != "password" && key != "passwordConfirm" && key != "token") {
 									u[key] = req.body[key]
 								}
 							}
+
+							u.password = hash;
 
 							users.doc(email).set(u)
 
@@ -269,16 +271,54 @@ router.post('/like', (req, res, next) => {
 							user.dislikes = [];
 						}
 
-						users.doc(req.token.email).update({
-							likes: user.likes,
-							dislikes: user.dislikes,
-							history: user.history
-						})
+						// Add matches to both users
+						users.where('email', '==', likee).get()
+							.then(snapshot2 => {
+								if (snapshot.empty) {
+									return res.status(401).json({err: "no user associated with that email"})
+								}
 
-						return res.status(200).json({ok: true})
+								snapshot2.forEach(likedUser => {
+									lu = likedUser.data();
+
+									if (!lu.matches) {
+										lu.matches = []
+									}
+
+									if (lu.likes && lu.likes.includes(req.token.email)) {
+										lu.matches.push(req.token.email);
+										users.doc(likee).update({
+											matches: lu.matches
+										})
+
+										if (!user.matches) {
+											user.matches = [];
+										}
+
+										user.matches.push(likee);
+										users.doc(req.token.email).update({
+											likes: user.likes,
+											dislikes: user.dislikes,
+											matches: user.matches,
+											history: user.history
+										})
+
+										return res.status(200).json({match: true})
+									} else {
+										users.doc(req.token.email).update({
+											likes: user.likes,
+											dislikes: user.dislikes,
+											history: user.history
+										})
+
+										return res.status(200).json({ok: true})
+									}
+
+								})
+							})
+					} else {
+						return res.status(401).json({err: "already liked"})
 					}
-
-					return res.status(401).json({err: "already liked"})
 				});
 			})
 			.catch(err => {
@@ -332,9 +372,19 @@ router.post('/dislike', (req, res, next) => {
 							user.likes = [];
 						}
 
+						if (!user.matches) {
+							user.matches = [];
+						}
+
+						// If the person was matched before, unmatch
+						if (user.matches.includes(likee)) {
+							user.matches = user.matches.filter(e => e !== likee)
+						}
+
 						users.doc(req.token.email).update({
 							dislikes: user.dislikes,
 							likes: user.likes,
+							matches: user.matches,
 							history: user.history
 						})
 
