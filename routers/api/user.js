@@ -30,6 +30,14 @@ var transporter = nodemailer.createTransport({
 var db = admin.firestore();
 var users = db.collection('users')
 
+
+//dont really need this but wanted to include
+//var storageRef = firebase.storage().ref();
+//var pictureRef = storageRef.child('myPhoto.jpg');
+//var pictureImageRef = storageRef.child('images/myPhoto.jpg');
+
+
+
 router.post('/', (req, res, next) => {
 	if (req.token == null) {
 		res.status(401).json({err: "unauthorized"})
@@ -59,7 +67,7 @@ router.post('/signup', (req, res, next) => {
 		var bio = req.body.bio
 		var username  = req.body.username
 		var passwordConfirm = req.body.passwordConfirm
-		var persona  = req.body.persona 
+		var persona  = req.body.persona
 
 		// See if email is already associated with an account
 		users.where('email', '==', email).get()
@@ -352,13 +360,13 @@ router.post('/dislike', (req, res, next) => {
 							user.history = [{
 								action: "dislike",
 								date: Date.now(),
-								data: likee 
+								data: likee
 							}];
 						} else {
 							user.history.push({
 								action: "dislike",
 								date: Date.now(),
-								data: likee 
+								data: likee
 							});
 						}
 
@@ -532,7 +540,7 @@ router.post('/ch-settings', (req, res, next) => {
 			return res.status(422).json({err: "invalid email"})
 		}
 
-		if (req.body.password && req.body.confirmPassword && 
+		if (req.body.password && req.body.confirmPassword &&
 			req.body.password != req.body.passwordConfirm) {
 			return res.status(422).json({err: "passwords do not match"})
 		}
@@ -609,6 +617,27 @@ router.get('/view/:email', (req, res, next) => {
 			return res.status(500).json({err: "internal server error"})
 		});
 })
+
+router.use(fileUpload());
+
+router.post('/upload/:email', function(req,res) {
+	if(Object.keys(req.files).length == 0) {
+		return res.status(400).json({err: "no files were uploaded."})
+	}
+	let picFile = req.files.file;
+	picFile.mv(
+		`${__dirname}/../../profilePics/` + req.params.email + `.jpg`,
+		function (err) {
+			if (err) {
+				return res.status(500).send({err: "error uploading resume"})
+			}
+
+			res.status(200).json({ok: true})
+		}
+	)
+});
+
+
 
 function makeJWT(email) {
 	return jwt.sign({
