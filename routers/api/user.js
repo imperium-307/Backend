@@ -617,7 +617,6 @@ router.get('/view/:email', (req, res, next) => {
 		});
 })
 
-<<<<<<< HEAD
 router.post('/request-users', (req, res, next) => {
 	if (req.token != null) {
 		users.where('email', '==', req.token.email).get()
@@ -637,7 +636,6 @@ router.post('/request-users', (req, res, next) => {
 					users.where('jobType', '==', u.jobType)
 						.where('persona', '==', oppositePersona).get()
 						.then(snapshot => {
-							// TODO check regions
 							if (snapshot.empty) {
 								return res.status(404).json({err: "no more users"})
 							}
@@ -645,9 +643,11 @@ router.post('/request-users', (req, res, next) => {
 							var usersToRet = [];
 							snapshot.forEach(doc => {
 								var u2 = doc.data()
+								delete u2.password;
 								usersToRet.push(u2);
 							})
 
+							// Make sure majors match
 							usersToRet = usersToRet.filter(function(e) {
 								var myMajors = u.major.split(",");
 								var otherMajors = e.major.split(",");
@@ -668,6 +668,11 @@ router.post('/request-users', (req, res, next) => {
 								}
 
 								return true;
+							})
+
+							// Make sure regions match
+							usersToRet = usersToRet.filter(function(e) {
+								return (u.northeast && e.northeast) || (u.west && e.west) || (u.south && e.south) || (u.midwest && e.midwest)
 							})
 
 							if (usersToRet.length == 0) {
