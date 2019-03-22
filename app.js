@@ -12,8 +12,8 @@ dotenv.load({ path: '.env' });
 
 app.use(cors())
 
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({limit: '50mb', extended: true}))
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true}))
 
 // We server resumes at url.com/email@example.com.pdf
 app.use('/resumes', express.static(__dirname + '/resumes'))
