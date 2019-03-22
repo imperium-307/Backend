@@ -413,7 +413,10 @@ router.post('/dislike', (req, res, next) => {
 router.post('/favorite', (req, res, next) => {
 	if (req.token != null) {
 		// TODO update this depending on what @frontend sets it to
-		var favoritee = req.body.favoritee
+		var favoritee = req.body.likee;
+		if (!favoritee) {
+			favoritee = req.body.favoritee;
+		}
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {

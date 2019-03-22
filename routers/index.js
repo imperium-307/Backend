@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const apiRouter = require('./api/index')
 
 function setJWT(req, res, next) {
-	console.log(req.body);
 	jwt.verify(req.body.token, process.env.JWT_SECRET, function(err, dec) {
 		if (err) {
 			req.token = null
