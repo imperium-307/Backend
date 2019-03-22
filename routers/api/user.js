@@ -577,7 +577,7 @@ router.post('/ch-settings', (req, res, next) => {
 
 					users.doc(req.token.email).update(u)
 
-					return res.status(200).json({ok: true})
+					return res.status(200).json({ok: true, user: u})
 				}
 			})
 			.catch(err => {
