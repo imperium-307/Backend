@@ -578,7 +578,6 @@ router.post('/ch-settings', (req, res, next) => {
 
 router.post('/ch-resume/:email', (req, res, next) => {
 	var file = req.files.file
-	console.log(req.files.file)
 
 	file.mv(
 		`${__dirname}/../../resumes/` + req.params.email + `.pdf`,
@@ -608,6 +607,74 @@ router.get('/view/:email', (req, res, next) => {
 		.catch(err => {
 			return res.status(500).json({err: "internal server error"})
 		});
+})
+
+router.post('/request-users', (req, res, next) => {
+	if (req.token != null) {
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "user profile not found"})
+				}
+
+				snapshot.forEach(doc => {
+					u = doc.data();
+
+					var oppositePersona = 'student';
+					if (u.persona == 'student') {
+						oppositePersona = 'employer';
+					}
+
+					users.where('jobType', '==', u.jobType)
+						.where('persona', '==', oppositePersona).get()
+						.then(snapshot => {
+							// TODO check regions
+							if (snapshot.empty) {
+								return res.status(404).json({err: "no more users"})
+							}
+
+							var usersToRet = [];
+							snapshot.forEach(doc => {
+								var u2 = doc.data()
+								usersToRet.push(u2);
+							})
+
+							usersToRet = usersToRet.filter(function(e) {
+								var myMajors = u.major.split(",");
+								var otherMajors = e.major.split(",");
+
+								return myMajors.some(function(el) {
+									return otherMajors.includes(el);
+								})
+							})
+
+							// Makes sure the user hasn't liked/disliked this person before
+							usersToRet = usersToRet.filter(function(e) {
+								if (u.likes && u.likes.includes(e.email)) {
+									return false;
+								}
+
+								if (u.dislikes && u.dislikes.includes(e.email)) {
+									return false;
+								}
+
+								return true;
+							})
+
+							if (usersToRet.length == 0) {
+								return res.status(404).json({err: "no more users"})
+							} else {
+								return res.status(200).json({users: usersToRet})
+							}
+						});
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
 })
 
 function makeJWT(email) {
