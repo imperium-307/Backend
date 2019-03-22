@@ -687,6 +687,7 @@ router.post('/request-users', (req, res, next) => {
 				return res.status(500).json({err: "internal server error"})
 			});
 	} else {
+		console.log(req.token);
 		return res.status(401).json({err: "unauthorized"})
 	}
 })
