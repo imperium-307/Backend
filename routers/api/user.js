@@ -432,7 +432,7 @@ router.post('/favorite', (req, res, next) => {
 
 					if (!user.favorites.includes(favoritee)) {
 						if (user.favorites.length >= 3) {
-							return res.status(401).json({err: "max favorites reached"})
+							return res.status(401).json({err: "You've already favorited 3 companies"})
 						} else {
 							user.favorites.push(favoritee);
 
@@ -457,9 +457,28 @@ router.post('/favorite', (req, res, next) => {
 
 							return res.status(200).json({ok: true})
 						}
-					}
+					} else {
+						user.favorites = user.favorites.filter(e => e === favoritee)
 
-					return res.status(401).json({err: "already favorited"})
+						if (user.history == null) {
+							user.history = [{
+								action: "unfavorite",
+								date: Date.now(),
+								data: favoritee
+							}];
+						} else {
+							user.history.push({
+								action: "unfavorite",
+								date: Date.now(),
+								data: favoritee
+							});
+						}
+
+						users.doc(req.token.email).update({
+							favorites: user.favorites,
+							history: user.history
+						})
+					}
 				});
 			})
 			.catch(err => {
