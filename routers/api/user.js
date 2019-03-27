@@ -478,6 +478,8 @@ router.post('/favorite', (req, res, next) => {
 							favorites: user.favorites,
 							history: user.history
 						})
+
+						return res.status(200).json({ok: true})
 					}
 				});
 			})
@@ -659,7 +661,7 @@ router.post('/request-users', (req, res, next) => {
 						.where('persona', '==', oppositePersona).get()
 						.then(snapshot => {
 							if (snapshot.empty) {
-								return res.status(404).json({err: "no more users"})
+								return res.status(404).json({err: "There are no more profiles available, check back later"})
 							}
 
 							var usersToRet = [];
@@ -698,7 +700,7 @@ router.post('/request-users', (req, res, next) => {
 							})
 
 							if (usersToRet.length == 0) {
-								return res.status(404).json({err: "no more users"})
+								return res.status(404).json({err: "There are no more profiles available, check back later"})
 							} else {
 								return res.status(200).json({users: usersToRet})
 							}
