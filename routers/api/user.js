@@ -29,6 +29,7 @@ var transporter = nodemailer.createTransport({
 
 var db = admin.firestore();
 var users = db.collection('users')
+var jobs = db.collection('jobs')
 
 
 //dont really need this but wanted to include
@@ -641,6 +642,133 @@ router.get('/view/:email', (req, res, next) => {
 		});
 })
 
+router.post('/create-job', (req, res, next) => {
+	if (req.token != null) {
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "user doesn't exist"})
+				}
+
+				snapshot.forEach(doc => {
+					var u = doc.data();
+
+					if (u.persona != "employer") {
+						return res.status(401).json({err: "unauthorized"})
+					}
+
+					if (!u.lastJob) {
+						u.lastJob = 1
+					} else {
+						u.lastJob++
+					}
+
+					var newJob = {
+						bio: req.body.bio,
+						major: req.body.major,
+						jobType: req.body.jobType,
+						midwest: req.body.midwest,
+						south: req.body.south,
+						west: req.body.west,
+						northeast: req.body.northeast,
+						location: req.body.location,
+						creator: req.token.email,
+						id: u.lastJob,
+					}
+
+					jobs.doc(req.token.email + '-' + u.lastJob).set(newJob)
+
+					users.doc(req.token.email).update(u)
+
+					return res.status(200).json({ok: true})
+				})
+			})
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
+router.post('/ch-job', (req, res, next) => {
+	if (req.token != null) {
+		var jobid = req.body.jobid;
+
+		jobs.where('creator', '==', req.token.email)
+			.where('id', '==', jobid).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "job not found"})
+				}
+
+				snapshot.forEach(doc => {
+					var j = doc.data();
+
+					var newJob = {
+						bio: req.body.bio,
+						major: req.body.major,
+						company: req.body.company,
+						jobType: req.body.jobType,
+						midwest: req.body.midwest,
+						south: req.body.south,
+						west: req.body.west,
+						northeast: req.body.northeast,
+						location: req.body.location,
+						creator: req.token.email,
+					}
+
+					jobs.doc(req.token.email + '-' + jobid).update(newJob)
+
+					return res.status(200).json({ok: true})
+				})
+			})
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
+router.post('/get-job', (req, res, next) => {
+	var companyemail = req.body.companyemail;
+	var jobid = req.body.jobid;
+
+	jobs.where('creator', '==', companyemail)
+		.where('id', '==', jobid).get()
+		.then(snapshot => {
+			if (snapshot.empty) {
+				return res.status(404).json({err: "job not found"})
+			}
+
+			snapshot.forEach(doc => {
+				return res.status(200).json({jobs: doc.data()})
+			})
+		})
+		.catch(err => {
+			return res.status(500).json({err: "internal server error"})
+		});
+})
+
+router.post('/get-all-jobs', (req, res, next) => {
+	var companyemail = req.body.companyemail;
+
+	jobs.where('creator', '==', companyemail).get()
+		.then(snapshot => {
+			if (snapshot.empty) {
+				return res.status(404).json({err: "user profile not found"})
+			}
+
+			var jobs = []
+			snapshot.forEach(doc => {
+				jobs.push(doc.data())
+			})
+
+			return res.status(200).json({jobs: jobs})
+		})
+		.catch(err => {
+			return res.status(500).json({err: "internal server error"})
+		});
+})
+
+// TODO this needs a lot of updates now that jobs are separeated
+// Probs will need to be split into recruiters searching for students
+// and students searching for jobs
 router.post('/request-users', (req, res, next) => {
 	if (req.token != null) {
 		users.where('email', '==', req.token.email).get()
