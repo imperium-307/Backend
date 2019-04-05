@@ -688,6 +688,9 @@ router.post('/create-job', (req, res, next) => {
 						creator: req.token.email,
 						email: req.token.email + "-" + u.lastJob,
 						photo: u.photo,
+						wage: req.body.wage,
+						start: req.body.start,
+						end: req.body.end,
 						id: u.lastJob,
 					}
 
