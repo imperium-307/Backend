@@ -172,7 +172,8 @@ router.post('/login', (req, res, next) => {
 					bcrypt.compare(password, doc.data().password, function(err, isCorrect) {
 						if(isCorrect) {
 							return res.status(200).json({
-								token: makeJWT(email)
+								token: makeJWT(email),
+								persona: doc.data().persona
 							})
 						} else {
 							return res.status(403).json({err: "email or password is incorrect"})
@@ -673,10 +674,11 @@ router.post('/create-job', (req, res, next) => {
 						northeast: req.body.northeast,
 						location: req.body.location,
 						creator: req.token.email,
+						photo: u.photo,
 						id: u.lastJob,
 					}
 
-					jobs.doc(req.token.email + '-' + u.lastJob).set(newJob)
+					jobs.doc(req.token.email + '/' + u.lastJob).set(newJob)
 
 					users.doc(req.token.email).update(u)
 
@@ -751,7 +753,7 @@ router.post('/get-all-jobs', (req, res, next) => {
 	jobs.where('creator', '==', companyemail).get()
 		.then(snapshot => {
 			if (snapshot.empty) {
-				return res.status(404).json({err: "user profile not found"})
+				return res.status(404).json({err: "no jobs found"})
 			}
 
 			var jobs = []
@@ -766,10 +768,81 @@ router.post('/get-all-jobs', (req, res, next) => {
 		});
 })
 
-// TODO this needs a lot of updates now that jobs are separeated
-// Probs will need to be split into recruiters searching for students
-// and students searching for jobs
-router.post('/request-users', (req, res, next) => {
+router.post('/request-students', (req, res, next) => {
+	if (req.token != null) {
+		var job = req.body.job
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "user profile not found"})
+				}
+
+				snapshot.forEach(doc => {
+					u = doc.data();
+
+					var oppositePersona = 'student';
+					if (u.persona == 'student') {
+						oppositePersona = 'employer';
+					}
+
+					jobs.where('jobType', '==', u.jobType).get()
+						.then(snapshot => {
+							if (snapshot.empty) {
+								return res.status(404).json({err: "There are no more profiles available, check back later"})
+							}
+
+							var foundJobs = [];
+							snapshot.forEach(doc => {
+								var job = doc.data()
+								foundJobs.push(job);
+							})
+
+							// Make sure majors match
+							foundJobs = foundJobs.filter(function(e) {
+								var myMajors = u.major.split(",");
+								var otherMajors = e.major.split(",");
+
+								return myMajors.some(function(el) {
+									return otherMajors.includes(el);
+								})
+							})
+
+							// Makes sure the user hasn't liked/disliked this person before
+							foundJobs = foundJobs.filter(function(e) {
+								if (u.likes && u.likes.includes(e.email)) {
+									return false;
+								}
+
+								if (u.dislikes && u.dislikes.includes(e.email)) {
+									return false;
+								}
+
+								return true;
+							})
+
+							// Make sure regions match
+							foundJobs = foundJobs.filter(function(e) {
+								return (u.northeast && e.northeast) || (u.west && e.west) || (u.south && e.south) || (u.midwest && e.midwest)
+							})
+
+							if (foundJobs.length == 0) {
+								return res.status(404).json({err: "There are no more profiles available, check back later"})
+							} else {
+								return res.status(200).json({users: foundJobs})
+							}
+						});
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		console.log(req.token);
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
+router.post('/request-jobs', (req, res, next) => {
 	if (req.token != null) {
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
@@ -785,22 +858,20 @@ router.post('/request-users', (req, res, next) => {
 						oppositePersona = 'employer';
 					}
 
-					users.where('jobType', '==', u.jobType)
-						.where('persona', '==', oppositePersona).get()
+					jobs.where('jobType', '==', u.jobType).get()
 						.then(snapshot => {
 							if (snapshot.empty) {
 								return res.status(404).json({err: "There are no more profiles available, check back later"})
 							}
 
-							var usersToRet = [];
+							var foundJobs = [];
 							snapshot.forEach(doc => {
-								var u2 = doc.data()
-								delete u2.password;
-								usersToRet.push(u2);
+								var job = doc.data()
+								foundJobs.push(job);
 							})
 
 							// Make sure majors match
-							usersToRet = usersToRet.filter(function(e) {
+							foundJobs = foundJobs.filter(function(e) {
 								var myMajors = u.major.split(",");
 								var otherMajors = e.major.split(",");
 
@@ -810,7 +881,7 @@ router.post('/request-users', (req, res, next) => {
 							})
 
 							// Makes sure the user hasn't liked/disliked this person before
-							usersToRet = usersToRet.filter(function(e) {
+							foundJobs = foundJobs.filter(function(e) {
 								if (u.likes && u.likes.includes(e.email)) {
 									return false;
 								}
@@ -823,14 +894,14 @@ router.post('/request-users', (req, res, next) => {
 							})
 
 							// Make sure regions match
-							usersToRet = usersToRet.filter(function(e) {
+							foundJobs = foundJobs.filter(function(e) {
 								return (u.northeast && e.northeast) || (u.west && e.west) || (u.south && e.south) || (u.midwest && e.midwest)
 							})
 
-							if (usersToRet.length == 0) {
+							if (foundJobs.length == 0) {
 								return res.status(404).json({err: "There are no more profiles available, check back later"})
 							} else {
-								return res.status(200).json({users: usersToRet})
+								return res.status(200).json({users: foundJobs})
 							}
 						});
 				});
