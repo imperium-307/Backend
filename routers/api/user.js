@@ -97,6 +97,8 @@ router.post('/signup', (req, res, next) => {
 								}
 							}
 
+							//u[hidden] = 0;
+
 							u.password = hash;
 
 							users.doc(email).set(u)
@@ -913,6 +915,24 @@ router.post('/request-jobs', (req, res, next) => {
 		console.log(req.token);
 		return res.status(401).json({err: "unauthorized"})
 	}
+})
+
+router.post('/hide-user/:email', (req, res, next) => {
+
+	users.where('email', '==', req.params.email).get()
+		.then(snapshot => {
+			if (snapshot.empty) {
+				return res.status(404).json({err: "user profile not found"})
+			}
+
+			snapshot.forEach(doc => {
+				ret = doc.data();
+				ret[hiden] = 1
+			});
+		})
+		.catch(err => {
+			return res.status(500).json({err: "internal server error"})
+		});
 })
 
 function makeJWT(email) {
