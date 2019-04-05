@@ -935,27 +935,36 @@ router.post('/request-jobs', (req, res, next) => {
 				return res.status(500).json({err: "internal server error"})
 			});
 	} else {
-		console.log(req.token);
 		return res.status(401).json({err: "unauthorized"})
 	}
 })
 
-router.post('/hide-user/:email', (req, res, next) => {
+router.post('/hide-user', (req, res, next) => {
+	if (req.token) {
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "user profile not found"})
+				}
 
-	users.where('email', '==', req.params.email).get()
-		.then(snapshot => {
-			if (snapshot.empty) {
-				return res.status(404).json({err: "user profile not found"})
-			}
+				snapshot.forEach(doc => {
+					user = doc.data();
 
-			snapshot.forEach(doc => {
-				ret = doc.data();
-				ret[hiden] = 1
+					if (user.isHidden) {
+						user.isHidden = false;
+					} else {
+						user.isHidden = true;
+					}
+
+					users.doc(req.token.email).update(user)
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
 			});
-		})
-		.catch(err => {
-			return res.status(500).json({err: "internal server error"})
-		});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
 })
 
 function makeJWT(email) {
