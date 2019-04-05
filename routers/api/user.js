@@ -241,99 +241,99 @@ router.post('/reset', (req, res, next) => {
 
 router.post('/like', (req, res, next) => {
 	if (req.token != null) {
-		// TODO update this depending on what @frontend sets it to
-		var likee = req.body.likee
-		users.where('email', '==', req.token.email).get()
+		// Ok so this is awful and I hate it
+		// But it should work, so yeah
+		var domain1, domain2;
+		var id1, id2;
+		var obj1, obj2;
+
+		if (req.body.iam) {
+			// Job is liking student
+			id1 = req.body.iam;
+			id2 = req.body.likee;
+
+			domain1 = jobs;
+			domain2 = users;
+		} else {
+			// Student is liking job
+			id1 = req.token.email
+			id2 = req.body.likee
+
+			domain1 = users;
+			domain2 = jobs;
+		}
+
+		domain1.where('email', '==', id1).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
 					return res.status(401).json({err: "no user associated with that email"})
 				}
 
 				snapshot.forEach(doc => {
-					user = doc.data();
+					obj1 = doc.data();
 
-					if (user.likes == null) {
-						user.likes = [];
-					}
-
-					if (!user.likes.includes(likee)) {
-						user.likes.push(likee);
-
-						if (user.history == null) {
-							user.history = [{
-								action: "like",
-								date: Date.now(),
-								data: likee
-							}];
-						} else {
-							user.history.push({
-								action: "like",
-								date: Date.now(),
-								data: likee
-							});
-						}
-
-						// If the person was disliked before, remove them from dislikes
-						if (user.dislikes && user.dislikes.includes(likee)) {
-							var i = user.dislikes.indexOf(likee);
-							if (i > -1) {
-								user.dislikes.splice(i, 1);
+					domain2.where('email', '==', id2).get()
+						.then(snapshot => {
+							if (snapshot.empty) {
+								return res.status(401).json({err: "no user associated with that email"})
 							}
-						} else if (!user.dislikes) {
-							user.dislikes = [];
-						}
 
-						// Add matches to both users
-						users.where('email', '==', likee).get()
-							.then(snapshot2 => {
-								if (snapshot.empty) {
-									return res.status(401).json({err: "no user associated with that email"})
+							snapshot.forEach(doc => {
+								obj2 = doc.data();
+
+								// obj1 is liking obj2
+								if (!obj1.likes) {
+									obj1.likes = [];
 								}
 
-								snapshot2.forEach(likedUser => {
-									lu = likedUser.data();
-
-									if (!lu.matches) {
-										lu.matches = []
-									}
-
-									if (lu.likes && lu.likes.includes(req.token.email)) {
-										lu.matches.push(req.token.email);
-										users.doc(likee).update({
-											matches: lu.matches
-										})
-
-										if (!user.matches) {
-											user.matches = [];
-										}
-
-										user.matches.push(likee);
-										users.doc(req.token.email).update({
-											likes: user.likes,
-											dislikes: user.dislikes,
-											matches: user.matches,
-											history: user.history
-										})
-
-										return res.status(200).json({match: true})
+								if (!obj1.likes.includes(id2)) {
+									obj1.likes.push(id2);
+									if (obj1.history == null) {
+										obj1.history = [{
+											action: "like",
+											date: Date.now(),
+											data: id2
+										}];
 									} else {
-										users.doc(req.token.email).update({
-											likes: user.likes,
-											dislikes: user.dislikes,
-											history: user.history
-										})
+										obj1.history.push({
+											action: "like",
+											date: Date.now(),
+											data: id2
+										});
+									}
+								}
 
-										return res.status(200).json({ok: true})
+								if (obj2.likes && obj2.likes.includes(id1)) {
+									if (!obj1.matches) {
+										obj1.matches = []
 									}
 
-								})
+									if (!obj2.matches) {
+										obj2.matches = []
+									}
+
+									obj1.matches.push(id2);
+									obj2.matches.push(id1);
+
+									domain1.doc(id1).update(obj1)
+									domain2.doc(id2).update(obj2)
+
+									return res.status(200).json({match: true})
+								} else {
+									domain1.doc(id1).update(obj1)
+
+									return res.status(200).json({ok: true})
+								}
 							})
-					} else {
-						return res.status(401).json({err: "already liked"})
-					}
-				});
+						})
+						.catch(err => {
+							console.log(err)
+							return res.status(500).json({err: "internal server error"})
+						});
+				})
 			})
 			.catch(err => {
+				console.log(err)
 				return res.status(500).json({err: "internal server error"})
 			});
 	} else {
@@ -343,70 +343,88 @@ router.post('/like', (req, res, next) => {
 
 router.post('/dislike', (req, res, next) => {
 	if (req.token != null) {
-		// TODO update this depending on what @frontend sets it to
-		var likee = req.body.likee
-		users.where('email', '==', req.token.email).get()
+		// Ok so this is awful and I hate it
+		// But it should work, so yeah
+		var domain1, domain2;
+		var id1, id2;
+		var obj1, obj2;
+
+		if (req.body.iam) {
+			// Job is liking student
+			id1 = req.body.iam;
+			id2 = req.body.likee;
+
+			domain1 = jobs;
+			domain2 = users;
+		} else {
+			// Student is liking job
+			id1 = req.token.email
+			id2 = req.body.likee
+
+			domain1 = users;
+			domain2 = jobs;
+		}
+
+		domain1.where('email', '==', id1).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
 					return res.status(401).json({err: "no user associated with that email"})
 				}
 
 				snapshot.forEach(doc => {
-					user = doc.data();
+					obj1 = doc.data();
 
-					if (user.dislikes == null) {
-						user.dislikes = [];
-					}
-
-					if (!user.dislikes.includes(likee)) {
-						user.dislikes.push(likee)
-						if (user.history == null) {
-							user.history = [{
-								action: "dislike",
-								date: Date.now(),
-								data: likee
-							}];
-						} else {
-							user.history.push({
-								action: "dislike",
-								date: Date.now(),
-								data: likee
-							});
-						}
-
-						// If the person was disliked before, remove them from dislikes
-						if (user.likes && user.likes.includes(likee)) {
-							var i = user.likes.indexOf(likee);
-							if (i > -1) {
-								user.likes.splice(i, 1);
+					domain2.where('email', '==', id2).get()
+						.then(snapshot => {
+							if (snapshot.empty) {
+								return res.status(401).json({err: "no user associated with that email"})
 							}
-						} else if (!user.likes) {
-							user.likes = [];
-						}
 
-						if (!user.matches) {
-							user.matches = [];
-						}
+							snapshot.forEach(doc => {
+								obj2 = doc.data();
 
-						// If the person was matched before, unmatch
-						if (user.matches.includes(likee)) {
-							user.matches = user.matches.filter(e => e !== likee)
-						}
+								// obj1 is liking obj2
+								if (!obj1.dislikes) {
+									obj1.dislikes = [];
+								}
 
-						users.doc(req.token.email).update({
-							dislikes: user.dislikes,
-							likes: user.likes,
-							matches: user.matches,
-							history: user.history
+								if (!obj1.dislikes.includes(id2)) {
+									obj1.dislikes.push(id2);
+									if (obj1.history == null) {
+										obj1.history = [{
+											action: "dislike",
+											date: Date.now(),
+											data: id2
+										}];
+									} else {
+										obj1.history.push({
+											action: "dislike",
+											date: Date.now(),
+											data: id2
+										});
+									}
+								}
+
+								if (obj1.likes && obj1.likes.includes(id2)) {
+									obj1.likes = obj1.likes.filter(e => e !== id2)
+								}
+
+								if (obj1.matches && obj1.matches.includes(id2)) {
+									obj1.matches = obj1.matches.filter(e => e !== id2)
+								}
+
+								domain1.doc(id1).update(obj1)
+								return res.status(200).json({ok: true})
+							})
 						})
-
-						return res.status(200).json({ok: true})
-					} else {
-						return res.status(401).json({err: "already disliked"})
-					}
-				});
+						.catch(err => {
+							console.log(err)
+							return res.status(500).json({err: "internal server error"})
+						});
+				})
 			})
 			.catch(err => {
+				console.log(err)
 				return res.status(500).json({err: "internal server error"})
 			});
 	} else {
@@ -416,135 +434,125 @@ router.post('/dislike', (req, res, next) => {
 
 router.post('/favorite', (req, res, next) => {
 	if (req.token != null) {
-		// TODO update this depending on what @frontend sets it to
-		var favoritee = req.body.likee;
-		if (!favoritee) {
-			favoritee = req.body.favoritee;
+		// Ok so this is awful and I hate it
+		// But it should work, so yeah
+		var domain1, domain2;
+		var id1, id2;
+		var obj1, obj2;
+
+		if (req.body.iam) {
+			// Job is liking student
+			id1 = req.body.iam;
+			id2 = req.body.likee;
+
+			domain1 = jobs;
+			domain2 = users;
+		} else {
+			// Student is liking job
+			id1 = req.token.email
+			id2 = req.body.likee
+
+			domain1 = users;
+			domain2 = jobs;
 		}
-		users.where('email', '==', req.token.email).get()
+
+		domain1.where('email', '==', id1).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
 					return res.status(401).json({err: "no user associated with that email"})
 				}
 
 				snapshot.forEach(doc => {
-					user = doc.data();
+					obj1 = doc.data();
 
-					if (user.favorites == null) {
-						user.favorites = [];
-					}
-
-					if (!user.favorites.includes(favoritee)) {
-						if (user.favorites.length >= 3) {
-							return res.status(401).json({err: "You've already favorited 3 companies"})
-						} else {
-							user.favorites.push(favoritee);
-
-							if (user.history == null) {
-								user.history = [{
-									action: "favorite",
-									date: Date.now(),
-									data: favoritee
-								}];
-							} else {
-								user.history.push({
-									action: "favorite",
-									date: Date.now(),
-									data: favoritee
-								});
+					domain2.where('email', '==', id2).get()
+						.then(snapshot => {
+							if (snapshot.empty) {
+								return res.status(401).json({err: "no user associated with that email"})
 							}
 
-							users.doc(req.token.email).update({
-								favorites: user.favorites,
-								history: user.history
+							snapshot.forEach(doc => {
+								obj2 = doc.data();
+
+								// obj1 is favoriting obj2
+								if (!obj1.favorites) {
+									obj1.favorites = [];
+								}
+								if (!obj1.likes) {
+									obj1.likes = [];
+								}
+
+								if (!obj1.favorites.includes(id2)) {
+									if (obj1.favorites.length >= 3) {
+										return res.status(401).json({err: "You've already favorited 3 companies"})
+									} else {
+										obj1.favorites.push(id2);
+										if (!obj1.likes.includes(id2)) {
+											obj1.likes.push(id2);
+										}
+
+										if (obj1.history == null) {
+											obj1.history = [{
+												action: "favorite",
+												date: Date.now(),
+												data: id2
+											}];
+										} else {
+											obj1.history.push({
+												action: "favorite",
+												date: Date.now(),
+												data: id2
+											});
+										}
+
+										if (obj2.likes && obj2.likes.includes(id1)) {
+											if (!obj1.matches) {
+												obj1.matches= [];
+											}
+											if (!obj2.matches) {
+												obj2.matches = [];
+											}
+											obj1.matches.push(id2);
+											obj2.matches.push(id1);
+											domain1.doc(id1).update(obj1)
+											domain2.doc(id2).update(obj2)
+											return res.status(200).json({match: true})
+										} else {
+											domain1.doc(id1).update(obj1)
+											return res.status(200).json({ok: true})
+										}
+									}
+								} else {
+									// Unfavorite
+									obj1.favorites = obj1.favorites.filter(e => e !== id2)
+
+									if (obj1.history == null) {
+										user.history = [{
+											action: "unfavorite",
+											date: Date.now(),
+											data: id2
+										}];
+									} else {
+										obj1.history.push({
+											action: "unfavorite",
+											date: Date.now(),
+											data: id2
+										});
+									}
+
+									domain1.doc(id1).update(obj1)
+									return res.status(200).json({ok: true});
+								}
 							})
-
-							return res.status(200).json({ok: true})
-						}
-					} else {
-						user.favorites = user.favorites.filter(e => e === favoritee)
-
-						if (user.history == null) {
-							user.history = [{
-								action: "unfavorite",
-								date: Date.now(),
-								data: favoritee
-							}];
-						} else {
-							user.history.push({
-								action: "unfavorite",
-								date: Date.now(),
-								data: favoritee
-							});
-						}
-
-						users.doc(req.token.email).update({
-							favorites: user.favorites,
-							history: user.history
 						})
-
-						return res.status(200).json({ok: true})
-					}
-				});
+						.catch(err => {
+							console.log(err)
+							return res.status(500).json({err: "internal server error"})
+						});
+				})
 			})
 			.catch(err => {
-				return res.status(500).json({err: "internal server error"})
-			});
-	} else {
-		return res.status(401).json({err: "unauthorized"})
-	}
-})
-
-router.post('/unfavorite', (req, res, next) => {
-	if (req.token != null) {
-		// TODO update this depending on what @frontend sets it to
-		var favoritee = req.body.favoritee
-		users.where('email', '==', req.token.email).get()
-			.then(snapshot => {
-				if (snapshot.empty) {
-					return res.status(401).json({err: "no user associated with that email"})
-				}
-
-				snapshot.forEach(doc => {
-					user = doc.data();
-
-					if (user.favorites == null) {
-						user.favorites = [];
-					}
-
-					if (user.favorites.includes(favoritee)) {
-						if (user.favorites.length >= 3) {
-							return res.status(401).json({err: "max favorites reached"})
-						} else {
-							user.favorites = user.favorites.filter(e => e !== favoritee)
-
-							if (user.history == null) {
-								user.history = [{
-									action: "unfavorite",
-									date: Date.now(),
-									data: favoritee
-								}];
-							} else {
-								user.history.push({
-									action: "unfavorite",
-									date: Date.now(),
-									data: favoritee
-								});
-							}
-
-							users.doc(req.token.email).update({
-								favorites: user.favorites,
-								history: user.history
-							})
-
-							return res.status(200).json({ok: true})
-						}
-					}
-
-					return res.status(401).json({err: "not yet favorited"})
-				});
-			})
-			.catch(err => {
+				console.log(err)
 				return res.status(500).json({err: "internal server error"})
 			});
 	} else {
@@ -647,6 +655,7 @@ router.get('/view/:email', (req, res, next) => {
 
 router.post('/create-job', (req, res, next) => {
 	if (req.token != null) {
+		console.log(req.token.email)
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
@@ -669,6 +678,7 @@ router.post('/create-job', (req, res, next) => {
 					var newJob = {
 						bio: req.body.bio,
 						major: req.body.major,
+						jobName: req.body.jobName,
 						jobType: req.body.jobType,
 						midwest: req.body.midwest,
 						south: req.body.south,
@@ -676,11 +686,12 @@ router.post('/create-job', (req, res, next) => {
 						northeast: req.body.northeast,
 						location: req.body.location,
 						creator: req.token.email,
+						email: req.token.email + "-" + u.lastJob,
 						photo: u.photo,
 						id: u.lastJob,
 					}
 
-					jobs.doc(req.token.email + '/' + u.lastJob).set(newJob)
+					jobs.doc(req.token.email + '-' + u.lastJob).set(newJob)
 
 					users.doc(req.token.email).update(u)
 
@@ -730,11 +741,9 @@ router.post('/ch-job', (req, res, next) => {
 })
 
 router.post('/get-job', (req, res, next) => {
-	var companyemail = req.body.companyemail;
 	var jobid = req.body.jobid;
 
-	jobs.where('creator', '==', companyemail)
-		.where('id', '==', jobid).get()
+	jobs.where('email', '==', jobid).get()
 		.then(snapshot => {
 			if (snapshot.empty) {
 				return res.status(404).json({err: "job not found"})
@@ -763,7 +772,21 @@ router.post('/get-all-jobs', (req, res, next) => {
 				jobs.push(doc.data())
 			})
 
-			return res.status(200).json({jobs: jobs})
+			users.where('email', '==', companyemail).get()
+				.then(snapshot => {
+					if (snapshot.empty) {
+						return res.status(404).json({err: "no jobs found"})
+					}
+
+					snapshot.forEach(doc => {
+						var company = doc.data()
+						delete company.password;
+						return res.status(200).json({jobs: jobs, company: company})
+					})
+				})
+				.catch(err => {
+					return res.status(500).json({err: "internal server error"})
+				});
 		})
 		.catch(err => {
 			return res.status(500).json({err: "internal server error"})
