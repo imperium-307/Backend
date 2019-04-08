@@ -743,7 +743,6 @@ router.post('/ch-job', (req, res, next) => {
 router.post('/get-job', (req, res, next) => {
 	var jobid = req.body.jobid;
 
-	console.log("here")
 	jobs.where('email', '==', jobid).get()
 		.then(snapshot => {
 			if (snapshot.empty) {
