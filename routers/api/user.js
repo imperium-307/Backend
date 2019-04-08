@@ -796,7 +796,7 @@ router.post('/get-all-jobs', (req, res, next) => {
 
 router.post('/request-students', (req, res, next) => {
 	if (req.token != null) {
-		var job = req.body.job
+		var job = req.body.jobid
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
@@ -805,11 +805,6 @@ router.post('/request-students', (req, res, next) => {
 
 				snapshot.forEach(doc => {
 					u = doc.data();
-
-					var oppositePersona = 'student';
-					if (u.persona == 'student') {
-						oppositePersona = 'employer';
-					}
 
 					jobs.where('jobType', '==', u.jobType).get()
 						.then(snapshot => {
@@ -820,13 +815,15 @@ router.post('/request-students', (req, res, next) => {
 							var foundJobs = [];
 							snapshot.forEach(doc => {
 								var job = doc.data()
-								foundJobs.push(job);
+								if (job.isHidden == false) {
+									foundJobs.push(job);
+								}
 							})
 
 							// Make sure majors match
 							foundJobs = foundJobs.filter(function(e) {
-								var myMajors = u.major.split(",");
-								var otherMajors = e.major.split(",");
+								var myMajors = u.major.replace(", ", ",").split(",");
+								var otherMajors = e.major.replace(", ", ",").split(",");
 
 								return myMajors.some(function(el) {
 									return otherMajors.includes(el);
@@ -863,14 +860,13 @@ router.post('/request-students', (req, res, next) => {
 				return res.status(500).json({err: "internal server error"})
 			});
 	} else {
-		console.log(req.token);
 		return res.status(401).json({err: "unauthorized"})
 	}
 })
 
 router.post('/request-jobs', (req, res, next) => {
 	if (req.token != null) {
-		users.where('email', '==', req.token.email).get()
+		jobs.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
 					return res.status(404).json({err: "user profile not found"})
@@ -878,12 +874,7 @@ router.post('/request-jobs', (req, res, next) => {
 
 				snapshot.forEach(doc => {
 					u = doc.data();
-
-					var oppositePersona = 'student';
-					if (u.persona == 'student') {
-						oppositePersona = 'employer';
-					}
-
+					
 					jobs.where('jobType', '==', u.jobType).get()
 						.then(snapshot => {
 							if (snapshot.empty) {
@@ -893,13 +884,15 @@ router.post('/request-jobs', (req, res, next) => {
 							var foundJobs = [];
 							snapshot.forEach(doc => {
 								var job = doc.data()
-								foundJobs.push(job);
+								if (job.isHidden == false) {
+									foundJobs.push(job);
+								}
 							})
 
 							// Make sure majors match
 							foundJobs = foundJobs.filter(function(e) {
-								var myMajors = u.major.split(",");
-								var otherMajors = e.major.split(",");
+								var myMajors = u.major.replace(", ", ",").split(",");
+								var otherMajors = e.major.replace(", ", ",").split(",");
 
 								return myMajors.some(function(el) {
 									return otherMajors.includes(el);
