@@ -725,7 +725,7 @@ router.post('/ch-job', (req, res, next) => {
 						}
 					}
 
-					jobs.doc(jobid).update(newJob)
+					jobs.doc(jobid).update(j)
 
 					return res.status(200).json({ok: true})
 				})
