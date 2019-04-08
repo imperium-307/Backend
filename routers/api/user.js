@@ -746,6 +746,7 @@ router.post('/ch-job', (req, res, next) => {
 router.post('/get-job', (req, res, next) => {
 	var jobid = req.body.jobid;
 
+	console.log("here")
 	jobs.where('email', '==', jobid).get()
 		.then(snapshot => {
 			if (snapshot.empty) {
@@ -753,7 +754,7 @@ router.post('/get-job', (req, res, next) => {
 			}
 
 			snapshot.forEach(doc => {
-				return res.status(200).json({jobs: doc.data()})
+				return res.status(200).json(doc.data())
 			})
 		})
 		.catch(err => {
