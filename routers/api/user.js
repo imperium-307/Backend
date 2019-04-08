@@ -711,7 +711,7 @@ router.post('/ch-job', (req, res, next) => {
 		var jobid = req.body.jobid;
 
 		jobs.where('creator', '==', req.token.email)
-			.where('id', '==', jobid).get()
+			.where('email', '==', jobid).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
 					return res.status(404).json({err: "job not found"})
@@ -720,24 +720,21 @@ router.post('/ch-job', (req, res, next) => {
 				snapshot.forEach(doc => {
 					var j = doc.data();
 
-					var newJob = {
-						bio: req.body.bio,
-						major: req.body.major,
-						company: req.body.company,
-						jobType: req.body.jobType,
-						midwest: req.body.midwest,
-						south: req.body.south,
-						west: req.body.west,
-						northeast: req.body.northeast,
-						location: req.body.location,
-						creator: req.token.email,
+					for (var key in req.body) {
+						if (req.body[key] != null && key != "jobid" && key != "password" && key != "passwordConfirm" && key != "token") {
+							u[key] = req.body[key]
+						}
 					}
 
-					jobs.doc(req.token.email + '-' + jobid).update(newJob)
+					jobs.doc(jobid).update(newJob)
 
 					return res.status(200).json({ok: true})
 				})
 			})
+			.catch(err => {
+				console.log(err)
+				return res.status(500).json({err: "internal server error"})
+			});
 	} else {
 		return res.status(401).json({err: "unauthorized"})
 	}
