@@ -655,7 +655,6 @@ router.get('/view/:email', (req, res, next) => {
 
 router.post('/create-job', (req, res, next) => {
 	if (req.token != null) {
-		console.log(req.token.email)
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
@@ -795,8 +794,9 @@ router.post('/get-all-jobs', (req, res, next) => {
 
 router.post('/request-students', (req, res, next) => {
 	if (req.token != null) {
-		var job = req.body.jobid
-		users.where('email', '==', req.token.email).get()
+		var jobid = req.body.jobid
+		jobs.where('creator', '==', req.token.email)
+			.where('email', '==', jobid).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
 					return res.status(404).json({err: "user profile not found"})
@@ -805,22 +805,22 @@ router.post('/request-students', (req, res, next) => {
 				snapshot.forEach(doc => {
 					u = doc.data();
 
-					jobs.where('jobType', '==', u.jobType).get()
+					users.where('jobType', '==', u.jobType).get()
 						.then(snapshot => {
 							if (snapshot.empty) {
 								return res.status(404).json({err: "There are no more profiles available, check back later"})
 							}
 
-							var foundJobs = [];
+							var foundStudents = [];
 							snapshot.forEach(doc => {
-								var job = doc.data()
-								if (job.isHidden == false) {
-									foundJobs.push(job);
+								var student = doc.data()
+								if (student.isHidden == false || student.isHidden == undefined) {
+									foundStudents.push(student);
 								}
 							})
 
 							// Make sure majors match
-							foundJobs = foundJobs.filter(function(e) {
+							foundStudents = foundStudents.filter(function(e) {
 								var myMajors = u.major.replace(", ", ",").split(",");
 								var otherMajors = e.major.replace(", ", ",").split(",");
 
@@ -830,7 +830,7 @@ router.post('/request-students', (req, res, next) => {
 							})
 
 							// Makes sure the user hasn't liked/disliked this person before
-							foundJobs = foundJobs.filter(function(e) {
+							foundStudents = foundStudents.filter(function(e) {
 								if (u.likes && u.likes.includes(e.email)) {
 									return false;
 								}
@@ -843,14 +843,14 @@ router.post('/request-students', (req, res, next) => {
 							})
 
 							// Make sure regions match
-							foundJobs = foundJobs.filter(function(e) {
+							foundStudents = foundStudents.filter(function(e) {
 								return (u.northeast && e.northeast) || (u.west && e.west) || (u.south && e.south) || (u.midwest && e.midwest)
 							})
 
-							if (foundJobs.length == 0) {
+							if (foundStudents.length == 0) {
 								return res.status(404).json({err: "There are no more profiles available, check back later"})
 							} else {
-								return res.status(200).json({users: foundJobs})
+								return res.status(200).json({students: foundStudents})
 							}
 						});
 				});
@@ -865,7 +865,7 @@ router.post('/request-students', (req, res, next) => {
 
 router.post('/request-jobs', (req, res, next) => {
 	if (req.token != null) {
-		jobs.where('email', '==', req.token.email).get()
+		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
 				if (snapshot.empty) {
 					return res.status(404).json({err: "user profile not found"})
@@ -883,7 +883,7 @@ router.post('/request-jobs', (req, res, next) => {
 							var foundJobs = [];
 							snapshot.forEach(doc => {
 								var job = doc.data()
-								if (job.isHidden == false) {
+								if (job.isHidden == false || job.isHidden == undefined) {
 									foundJobs.push(job);
 								}
 							})
@@ -919,7 +919,7 @@ router.post('/request-jobs', (req, res, next) => {
 							if (foundJobs.length == 0) {
 								return res.status(404).json({err: "There are no more profiles available, check back later"})
 							} else {
-								return res.status(200).json({users: foundJobs})
+								return res.status(200).json({jobs: foundJobs})
 							}
 						});
 				});
