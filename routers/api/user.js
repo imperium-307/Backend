@@ -721,7 +721,7 @@ router.post('/ch-job', (req, res, next) => {
 
 					for (var key in req.body) {
 						if (req.body[key] != null && key != "jobid" && key != "password" && key != "passwordConfirm" && key != "token") {
-							u[key] = req.body[key]
+							j[key] = req.body[key]
 						}
 					}
 
