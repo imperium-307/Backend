@@ -7,6 +7,9 @@ const functions = require('firebase-functions');
 const nodemailer = require('nodemailer');
 const fileUpload = require('express-fileupload')
 const fs = require('fs')
+const http = require('http')
+const io = require('socket.io')(http)
+
 
 var serviceAccount = require('../../serviceAccountKey.json');
 
@@ -873,7 +876,7 @@ router.post('/request-jobs', (req, res, next) => {
 
 				snapshot.forEach(doc => {
 					u = doc.data();
-					
+
 					jobs.where('jobType', '==', u.jobType).get()
 						.then(snapshot => {
 							if (snapshot.empty) {
@@ -959,6 +962,28 @@ router.post('/hide-user', (req, res, next) => {
 		return res.status(401).json({err: "unauthorized"})
 	}
 })
+
+app.post('/messages', (req, res) => {
+  var message = req.body;
+	//debating how to save in backend, but can go by message/associated user
+
+	message.save((err) =>{
+    if(err)
+      sendStatus(500);
+    res.sendStatus(200);
+  })
+
+})
+
+router.get('/messages', (req, res) => {
+  //get message by user, then send via associated user
+})
+
+io.on(‘connection’, () =>{
+ console.log(‘a user is connected’)
+})
+
+
 
 function makeJWT(email) {
 	return jwt.sign({
