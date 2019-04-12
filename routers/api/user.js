@@ -7,9 +7,6 @@ const functions = require('firebase-functions');
 const nodemailer = require('nodemailer');
 const fileUpload = require('express-fileupload')
 const fs = require('fs')
-const http = require('http')
-const io = require('socket.io')(http)
-
 
 var serviceAccount = require('../../serviceAccountKey.json');
 
@@ -33,14 +30,7 @@ var transporter = nodemailer.createTransport({
 var db = admin.firestore();
 var users = db.collection('users')
 var jobs = db.collection('jobs')
-
-
-//dont really need this but wanted to include
-//var storageRef = firebase.storage().ref();
-//var pictureRef = storageRef.child('myPhoto.jpg');
-//var pictureImageRef = storageRef.child('images/myPhoto.jpg');
-
-
+var messages = db.collection('messages')
 
 router.post('/', (req, res, next) => {
 	if (req.token == null) {
@@ -963,27 +953,81 @@ router.post('/hide-user', (req, res, next) => {
 	}
 })
 
-app.post('/messages', (req, res) => {
-  var message = req.body;
-	//debating how to save in backend, but can go by message/associated user
+router.post('/message', (req, res) => {
+	var message = req.body.message;
+	var recipient = req.body.recipient;
+	var iam = req.body.iam;
 
-	message.save((err) =>{
-    if(err)
-      sendStatus(500);
-    res.sendStatus(200);
-  })
+	//users.doc(email).set(u)
 
+	if (req.token) {
+		var people = [iam || req.token.email, recipient];
+		people.sort()
+		var peopleString = people.join('*');
+
+		messages.where('id', '==', peopleString).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					messages.doc(peopleString).set({
+						id: peopleString,
+						messages: [message]
+					});
+
+					return res.status(200).json({ok: true})
+				}
+
+				snapshot.forEach(doc => {
+					mes = doc.data();
+					mes.messages.push(message);
+
+					messages.doc(peopleString).update(mes)
+					return res.status(200).json({ok: true})
+				});
+
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
 })
 
-router.get('/messages', (req, res) => {
-  //get message by user, then send via associated user
+router.post('/messages-since', (req, res) => {
+	var recipient = req.body.recipient;
+	var iam = req.body.iam;
+	var since = req.body.since;
+
+	if (req.token) {
+		var people = [iam || req.token.email, recipient];
+		people.sort()
+		var peopleString = people.join('*');
+
+		messages.where('id', '==', peopleString).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "no messages yet"})
+				}
+
+				snapshot.forEach(doc => {
+					mes = doc.data();
+					mes.messages = mes.messages.filter((m) => {
+						return m.date > since;
+					});
+
+					return res.status(200).json({messages: mes.messages})
+				});
+
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
 })
-
-io.on(‘connection’, () =>{
- console.log(‘a user is connected’)
-})
-
-
 
 function makeJWT(email) {
 	return jwt.sign({
