@@ -322,6 +322,8 @@ router.post('/like', (req, res, next) => {
 									domain1.doc(id1).update(obj1)
 									domain2.doc(id2).update(obj2)
 
+									sendEmail(id1, id2, obj1, obj2)
+
 									return res.status(200).json({match: true})
 								} else {
 									domain1.doc(id1).update(obj1)
@@ -495,20 +497,20 @@ router.post('/favorite', (req, res, next) => {
 											obj1.likes.push(id2);
 										}
 
-										// TODO need to decide if notif prefs are job based or account based
-										//if (obj2)
-										opt = {
-											from: 'imperium397@gmail.com',
-											to: obj2.creator,
-											subject: 'You have a new favorite!',
-											text: 'Your job posting ' + obj2.jobName + ' was just favorited by ' + id1
-										}
-
-										transporter.sendMail(opt, function(err, r){
-											if (err) {
-												return res.status(500).json({err: "internal server error"})
+										if (obj2.emailNotifications && obj2.favoriteNotifications) {
+											var opt = {
+												from: 'imperium397@gmail.com',
+												to: obj2.creator,
+												subject: 'You have a new favorite!',
+												text: 'Your job posting ' + obj2.jobName + ' was just favorited by ' + obj1.username
 											}
-										});
+
+											transporter.sendMail(opt, function(err, r){
+												if (err) {
+													return res.status(500).json({err: "internal server error"})
+												}
+											});
+										}
 
 										if (obj1.history == null) {
 											obj1.history = [{
@@ -536,23 +538,8 @@ router.post('/favorite', (req, res, next) => {
 											domain1.doc(id1).update(obj1)
 											domain2.doc(id2).update(obj2)
 
-											if (id1.includes('-')) {
-												// Liker is a job
-											}
-											// Email to liker
-											opt = {
-												from: 'imperium397@gmail.com',
-												// TODO change id2
-												to: id2,
-												subject: 'You have a new favorite!',
-												text: 'Your job posting ' + obj2.jobName + ' was just favorited by ' + id1
-											}
+											sendEmail(id1, id2, obj1, obj2)
 
-											transporter.sendMail(opt, function(err, r){
-												if (err) {
-													return res.status(500).json({err: "internal server error"})
-												}
-											});
 											return res.status(200).json({match: true})
 										} else {
 											domain1.doc(id1).update(obj1)
@@ -727,6 +714,9 @@ router.post('/create-job', (req, res, next) => {
 						wage: req.body.wage,
 						start: req.body.start,
 						end: req.body.end,
+						emailNotifications: true,
+						desktopNotifications: true,
+						favoriteNotifications: true,
 						id: u.lastJob,
 					}
 
@@ -800,7 +790,24 @@ router.post('/get-all-jobs', (req, res, next) => {
 	jobs.where('creator', '==', companyemail).get()
 		.then(snapshot => {
 			if (snapshot.empty) {
-				return res.status(404).json({err: "no jobs found"})
+				// They don't have any jobs yet, but still give them the company name
+				users.where('email', '==', companyemail).get()
+					.then(snapshot => {
+						if (snapshot.empty) {
+							return res.status(404).json({err: "company not found"})
+						}
+
+						snapshot.forEach(doc => {
+							var company = doc.data()
+							delete company.password;
+							return res.status(200).json({company: company})
+						})
+					})
+					.catch(err => {
+						return res.status(500).json({err: "internal server error"})
+					});
+
+				return;
 			}
 
 			var jobs = []
@@ -811,7 +818,7 @@ router.post('/get-all-jobs', (req, res, next) => {
 			users.where('email', '==', companyemail).get()
 				.then(snapshot => {
 					if (snapshot.empty) {
-						return res.status(404).json({err: "no jobs found"})
+						return res.status(404).json({err: "company not found"})
 					}
 
 					snapshot.forEach(doc => {
@@ -1080,6 +1087,72 @@ function makeJWT(email) {
 	return jwt.sign({
 		email: email
 	}, process.env.JWT_SECRET, { expiresIn: process.env.JWT_SESSION_LENGTH })
+}
+
+function sendEmail(id1, id2, obj1, obj2) {
+	if (id1.includes('-')) {
+		// Liker is a job
+		if (obj1.emailNotifications) {
+			var opt = {
+				from: 'imperium397@gmail.com',
+				to: obj1.creator,
+				subject: 'You have a new match!',
+				text: 'You just matched with ' + obj2.username + '!'
+			}
+
+			transporter.sendMail(opt, function(err, r){
+				if (err) {
+					return res.status(500).json({err: "internal server error"})
+				}
+			});
+		}
+
+		if (obj2.emailNotifications) {
+			opt = {
+				from: 'imperium397@gmail.com',
+				to: obj2.email,
+				subject: 'You have a new match!',
+				text: 'You just matched with ' + obj1.jobName + '!'
+			}
+
+			transporter.sendMail(opt, function(err, r){
+				if (err) {
+					return res.status(500).json({err: "internal server error"})
+				}
+			});
+		}
+	} else {
+		// Liker is a student
+		if (obj1.emailNotifications) {
+			var opt = {
+				from: 'imperium397@gmail.com',
+				to: obj1.email,
+				subject: 'You have a new match!',
+				text: 'You just matched with ' + obj2.jobName + '!'
+			}
+
+			transporter.sendMail(opt, function(err, r){
+				if (err) {
+					return res.status(500).json({err: "internal server error"})
+				}
+			});
+		}
+
+		if (obj2.emailNotifications) {
+			opt = {
+				from: 'imperium397@gmail.com',
+				to: obj2.creator,
+				subject: 'You have a new match!',
+				text: 'You just matched with ' + obj1.username+ '!'
+			}
+
+			transporter.sendMail(opt, function(err, r){
+				if (err) {
+					return res.status(500).json({err: "internal server error"})
+				}
+			});
+		}
+	}
 }
 
 module.exports = router
