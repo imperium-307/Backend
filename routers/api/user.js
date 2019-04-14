@@ -32,6 +32,17 @@ var users = db.collection('users')
 var jobs = db.collection('jobs')
 var messages = db.collection('messages')
 
+// Ya like hacks?
+var messagesHack = {};
+messages.onSnapshot(snapshot => {
+	snapshot.forEach(doc => {
+		mes = doc.data()
+		messagesHack[mes.id] = Date.now();
+	})
+}, err => {
+	console.log(`Encountered error: ${err}`);
+});
+
 router.post('/', (req, res, next) => {
 	if (req.token == null) {
 		res.status(401).json({err: "unauthorized"})
@@ -484,6 +495,21 @@ router.post('/favorite', (req, res, next) => {
 											obj1.likes.push(id2);
 										}
 
+										// TODO need to decide if notif prefs are job based or account based
+										//if (obj2)
+										opt = {
+											from: 'imperium397@gmail.com',
+											to: obj2.creator,
+											subject: 'You have a new favorite!',
+											text: 'Your job posting ' + obj2.jobName + ' was just favorited by ' + id1
+										}
+
+										transporter.sendMail(opt, function(err, r){
+											if (err) {
+												return res.status(500).json({err: "internal server error"})
+											}
+										});
+
 										if (obj1.history == null) {
 											obj1.history = [{
 												action: "favorite",
@@ -509,6 +535,24 @@ router.post('/favorite', (req, res, next) => {
 											obj2.matches.push(id1);
 											domain1.doc(id1).update(obj1)
 											domain2.doc(id2).update(obj2)
+
+											if (id1.includes('-')) {
+												// Liker is a job
+											}
+											// Email to liker
+											opt = {
+												from: 'imperium397@gmail.com',
+												// TODO change id2
+												to: id2,
+												subject: 'You have a new favorite!',
+												text: 'Your job posting ' + obj2.jobName + ' was just favorited by ' + id1
+											}
+
+											transporter.sendMail(opt, function(err, r){
+												if (err) {
+													return res.status(500).json({err: "internal server error"})
+												}
+											});
 											return res.status(200).json({match: true})
 										} else {
 											domain1.doc(id1).update(obj1)
@@ -958,8 +1002,6 @@ router.post('/message', (req, res) => {
 	var recipient = req.body.recipient;
 	var iam = req.body.iam;
 
-	//users.doc(email).set(u)
-
 	if (req.token) {
 		var people = [iam || req.token.email, recipient];
 		people.sort()
@@ -994,36 +1036,41 @@ router.post('/message', (req, res) => {
 	}
 })
 
-router.post('/messages-since', (req, res) => {
+router.post('/messages-after', (req, res) => {
 	var recipient = req.body.recipient;
 	var iam = req.body.iam;
-	var since = req.body.since;
+	var after = req.body.after;
 
 	if (req.token) {
 		var people = [iam || req.token.email, recipient];
 		people.sort()
 		var peopleString = people.join('*');
 
-		messages.where('id', '==', peopleString).get()
-			.then(snapshot => {
-				if (snapshot.empty) {
-					return res.status(404).json({err: "no messages yet"})
-				}
+		if (!messagesHack[peopleString] || after == 0 || messagesHack[peopleString] > after) {
 
-				snapshot.forEach(doc => {
-					mes = doc.data();
-					mes.messages = mes.messages.filter((m) => {
-						return m.date > since;
+			if (!messagesHack[peopleString]) {
+				messagesHack[peopleString] = 1;
+			}
+
+			messages.where('id', '==', peopleString).get()
+				.then(snapshot => {
+					if (snapshot.empty) {
+						return res.status(404).json({err: "no messages yet"})
+					}
+
+					snapshot.forEach(doc => {
+						mes = doc.data();
+
+						return res.status(200).json({messages: mes.messages})
 					});
 
-					return res.status(200).json({messages: mes.messages})
+				})
+				.catch(err => {
+					return res.status(500).json({err: "internal server error"})
 				});
-
-			})
-			.catch(err => {
-				return res.status(500).json({err: "internal server error"})
-			});
-
+		} else {
+			return res.status(200).json({ok: true})
+		}
 	} else {
 		return res.status(401).json({err: "unauthorized"})
 	}
