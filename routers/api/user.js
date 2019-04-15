@@ -322,7 +322,7 @@ router.post('/like', (req, res, next) => {
 									domain1.doc(id1).update(obj1)
 									domain2.doc(id2).update(obj2)
 
-									sendEmail(id1, id2, obj1, obj2)
+									sendEmail(res, id1, id2, obj1, obj2)
 
 									return res.status(200).json({match: true})
 								} else {
@@ -538,7 +538,7 @@ router.post('/favorite', (req, res, next) => {
 											domain1.doc(id1).update(obj1)
 											domain2.doc(id2).update(obj2)
 
-											sendEmail(id1, id2, obj1, obj2)
+											sendEmail(res, id1, id2, obj1, obj2)
 
 											return res.status(200).json({match: true})
 										} else {
@@ -645,18 +645,20 @@ router.post('/ch-settings', (req, res, next) => {
 })
 
 router.post('/ch-resume/:email', (req, res, next) => {
-	var file = req.files.file
+	if (req.files) {
+		var file = req.files.file
 
-	file.mv(
-		`${__dirname}/../../resumes/` + req.params.email + `.pdf`,
-		function (err) {
-			if (err) {
-				return res.status(500).send({err: "error uploading resume"})
+		file.mv(
+			`${__dirname}/../../resumes/` + req.params.email + `.pdf`,
+			function (err) {
+				if (err) {
+					return res.status(500).send({err: "error uploading resume"})
+				}
+
+				res.status(200).json({ok: true})
 			}
-
-			res.status(200).json({ok: true})
-		}
-	)
+		)
+	}
 })
 
 router.get('/view/:email', (req, res, next) => {
@@ -1232,7 +1234,7 @@ function makeJWT(email) {
 	}, process.env.JWT_SECRET, { expiresIn: process.env.JWT_SESSION_LENGTH })
 }
 
-function sendEmail(id1, id2, obj1, obj2) {
+function sendEmail(res, id1, id2, obj1, obj2) {
 	if (id1.includes('-')) {
 		// Liker is a job
 		if (obj1.emailNotifications) {
