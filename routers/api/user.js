@@ -1083,6 +1083,103 @@ router.post('/messages-after', (req, res) => {
 	}
 })
 
+router.post('/unmatch', (req, res) => {
+	if (req.token != null) {
+		// Ok so this is awful and I hate it
+		// But it should work, so yeah
+		var domain1, domain2;
+		var id1, id2;
+		var obj1, obj2;
+
+		if (req.body.iam) {
+			// Job is liking student
+			id1 = req.body.iam;
+			id2 = req.body.likee;
+
+			domain1 = jobs;
+			domain2 = users;
+		} else {
+			// Student is liking job
+			id1 = req.token.email
+			id2 = req.body.likee
+
+			domain1 = users;
+			domain2 = jobs;
+		}
+
+		domain1.where('email', '==', id1).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(401).json({err: "no user associated with that email"})
+				}
+
+				snapshot.forEach(doc => {
+					obj1 = doc.data();
+
+					domain2.where('email', '==', id2).get()
+						.then(snapshot => {
+							if (snapshot.empty) {
+								return res.status(401).json({err: "no user associated with that email"})
+							}
+
+							snapshot.forEach(doc => {
+								obj2 = doc.data();
+
+								if (obj2.matches && obj1.matches) {
+									obj2.matches = obj2.matches.filter(e => e !== id1)
+									obj1.matches = obj1.matches.filter(e => e !== id2)
+
+									if (obj1.history == null) {
+										obj1.history = [{
+											action: "unmatch",
+											date: Date.now(),
+											data: id2
+										}];
+									} else {
+										obj1.history.push({
+											action: "unmatch",
+											date: Date.now(),
+											data: id2
+										});
+									}
+
+									if (obj2.history == null) {
+										obj2.history = [{
+											action: "unmatch",
+											date: Date.now(),
+											data: id1
+										}];
+									} else {
+										obj2.history.push({
+											action: "unmatch",
+											date: Date.now(),
+											data: id1
+										});
+									}
+
+									domain1.doc(id1).update(obj1)
+									domain2.doc(id2).update(obj2)
+									return res.status(200).json({ok: true})
+								} else {
+									return res.status(401).json({err: "not matched yet"})
+								}
+							})
+						})
+						.catch(err => {
+							console.log(err)
+							return res.status(500).json({err: "internal server error"})
+						});
+				})
+			})
+			.catch(err => {
+				console.log(err)
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
 function makeJWT(email) {
 	return jwt.sign({
 		email: email
