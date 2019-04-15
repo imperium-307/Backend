@@ -1083,6 +1083,7 @@ router.post('/messages-after', (req, res) => {
 	}
 })
 
+
 router.post('/unmatch', (req, res) => {
 	if (req.token != null) {
 		// Ok so this is awful and I hate it
@@ -1169,6 +1170,51 @@ router.post('/unmatch', (req, res) => {
 							console.log(err)
 							return res.status(500).json({err: "internal server error"})
 						});
+				})
+			})
+			.catch(err => {
+				console.log(err)
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		return res.status(401).json({err: "unauthorized"})
+	}
+})
+
+router.post('/unfavorite', (req, res) => {
+	var likee = req.body.likee;
+
+	if (req.token != null) {
+		users.where('email', '==', req.token.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(401).json({err: "no user associated with that email"})
+				}
+
+				snapshot.forEach(doc => {
+					obj1 = doc.data();
+					if (obj1.persona == "employer") {
+						return res.status(401).json({err: "employer's cannot favorite"})
+					}
+
+					if (obj1.history == null) {
+						obj1.history = [{
+							action: "unfavorite",
+							date: Date.now(),
+							data: likee
+						}];
+					} else {
+						obj1.history.push({
+							action: "unfavorite",
+							date: Date.now(),
+							data: likee
+						});
+					}
+
+					obj1.favorites = obj1.favorites.filter(e => e !== likee)
+
+					users.doc(req.token.email).update(obj1)
+					return res.status(200).json({ok: true})
 				})
 			})
 			.catch(err => {
