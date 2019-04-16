@@ -683,6 +683,7 @@ router.post('/ch-resume/:email', (req, res, next) => {
 })
 
 router.get('/view/:email', (req, res, next) => {
+	console.log(req.params.email)
 	users.where('email', '==', req.params.email).get()
 		.then(snapshot => {
 			if (snapshot.empty) {
@@ -698,6 +699,28 @@ router.get('/view/:email', (req, res, next) => {
 		.catch(err => {
 			return res.status(500).json({err: "internal server error"})
 		});
+})
+
+router.post('/post-view', (req, res, next) => {
+	if (req.token) {
+		users.where('email', '==', req.body.email).get()
+			.then(snapshot => {
+				if (snapshot.empty) {
+					return res.status(404).json({err: "user profile not found"})
+				}
+
+				snapshot.forEach(doc => {
+					ret = doc.data();
+					delete ret.password;
+					return res.status(200).json(ret)
+				});
+			})
+			.catch(err => {
+				return res.status(500).json({err: "internal server error"})
+			});
+	} else {
+		return res.status(500).json({err: "internal server error"})
+	}
 })
 
 router.post('/create-job', (req, res, next) => {
