@@ -221,7 +221,8 @@ router.post('/reset', (req, res, next) => {
 
 				transporter.sendMail(opt, function(err, r){
 					if (err) {
-						return res.status(500).json({err: "internal server error"})
+													console.log(err)
+													console.log("failed sending email to :", opt.to)
 					}
 				});
 
@@ -311,13 +312,28 @@ router.post('/like', (req, res, next) => {
 									if (!obj1.matches) {
 										obj1.matches = []
 									}
-
 									if (!obj2.matches) {
 										obj2.matches = []
+									}
+									if (!obj1.matchesObject) {
+										obj1.matchesObject = [];
+									}
+									if (!obj2.matchesObject) {
+										obj2.matchesObject = [];
 									}
 
 									obj1.matches.push(id2);
 									obj2.matches.push(id1);
+									obj1.matchesObject.push({
+										photo: obj2.photo,
+										name: obj2.username || obj2.jobName,
+										email: obj2.email
+									});
+									obj2.matchesObject.push({
+										photo: obj1.photo,
+										name: obj1.username || obj1.jobName,
+										email: obj1.email
+									});
 
 									domain1.doc(id1).update(obj1)
 									domain2.doc(id2).update(obj2)
@@ -487,6 +503,9 @@ router.post('/favorite', (req, res, next) => {
 								if (!obj1.likes) {
 									obj1.likes = [];
 								}
+								if(!obj1.favoritesObject) {
+									obj1.favoritesObject = [];
+								}
 
 								if (!obj1.favorites.includes(id2)) {
 									if (obj1.favorites.length >= 3) {
@@ -496,6 +515,11 @@ router.post('/favorite', (req, res, next) => {
 										if (!obj1.likes.includes(id2)) {
 											obj1.likes.push(id2);
 										}
+										obj1.favoritesObject.push({
+											photo: obj2.photo,
+											name: obj2.username || obj2.jobName,
+											email: obj2.email
+										})
 
 										if (obj2.emailNotifications && obj2.favoriteNotifications) {
 											var opt = {
@@ -507,7 +531,8 @@ router.post('/favorite', (req, res, next) => {
 
 											transporter.sendMail(opt, function(err, r){
 												if (err) {
-													return res.status(500).json({err: "internal server error"})
+													console.log(err)
+													console.log("failed sending email to :", opt.to)
 												}
 											});
 										}
@@ -533,8 +558,24 @@ router.post('/favorite', (req, res, next) => {
 											if (!obj2.matches) {
 												obj2.matches = [];
 											}
+											if (!obj1.matchesObject) {
+												obj1.matchesObject = [];
+											}
+											if (!obj2.matchesObject) {
+												obj2.matchesObject = [];
+											}
 											obj1.matches.push(id2);
 											obj2.matches.push(id1);
+											obj1.matchesObject.push({
+												photo: obj2.photo,
+												name: obj2.username || obj2.jobName,
+												email: obj2.email
+											});
+											obj2.matchesObject.push({
+												photo: obj1.photo,
+												name: obj1.username || obj1.jobName,
+												email: obj1.email
+											});
 											domain1.doc(id1).update(obj1)
 											domain2.doc(id2).update(obj2)
 
@@ -546,26 +587,6 @@ router.post('/favorite', (req, res, next) => {
 											return res.status(200).json({ok: true})
 										}
 									}
-								} else {
-									// Unfavorite
-									obj1.favorites = obj1.favorites.filter(e => e !== id2)
-
-									if (obj1.history == null) {
-										user.history = [{
-											action: "unfavorite",
-											date: Date.now(),
-											data: id2
-										}];
-									} else {
-										obj1.history.push({
-											action: "unfavorite",
-											date: Date.now(),
-											data: id2
-										});
-									}
-
-									domain1.doc(id1).update(obj1)
-									return res.status(200).json({ok: true});
 								}
 							})
 						})
@@ -1131,6 +1152,8 @@ router.post('/unmatch', (req, res) => {
 								if (obj2.matches && obj1.matches) {
 									obj2.matches = obj2.matches.filter(e => e !== id1)
 									obj1.matches = obj1.matches.filter(e => e !== id2)
+									obj2.matchesObject = obj2.matchesObject.filter(e => e.email !== id1)
+									obj1.matchesObject = obj1.matchesObject.filter(e => e.email !== id2)
 
 									if (obj1.history == null) {
 										obj1.history = [{
@@ -1214,6 +1237,7 @@ router.post('/unfavorite', (req, res) => {
 					}
 
 					obj1.favorites = obj1.favorites.filter(e => e !== likee)
+					obj1.favoritesObject = obj1.favoritesObject.filter(e => e.email !== likee)
 
 					users.doc(req.token.email).update(obj1)
 					return res.status(200).json({ok: true})
@@ -1247,7 +1271,8 @@ function sendEmail(res, id1, id2, obj1, obj2) {
 
 			transporter.sendMail(opt, function(err, r){
 				if (err) {
-					return res.status(500).json({err: "internal server error"})
+					console.log(err)
+					console.log("failed sending email to :", opt.to)
 				}
 			});
 		}
@@ -1262,7 +1287,8 @@ function sendEmail(res, id1, id2, obj1, obj2) {
 
 			transporter.sendMail(opt, function(err, r){
 				if (err) {
-					return res.status(500).json({err: "internal server error"})
+					console.log(err)
+					console.log("failed sending email to :", opt.to)
 				}
 			});
 		}
@@ -1278,7 +1304,8 @@ function sendEmail(res, id1, id2, obj1, obj2) {
 
 			transporter.sendMail(opt, function(err, r){
 				if (err) {
-					return res.status(500).json({err: "internal server error"})
+					console.log(err)
+					console.log("failed sending email to :", opt.to)
 				}
 			});
 		}
@@ -1293,7 +1320,8 @@ function sendEmail(res, id1, id2, obj1, obj2) {
 
 			transporter.sendMail(opt, function(err, r){
 				if (err) {
-					return res.status(500).json({err: "internal server error"})
+					console.log(err)
+					console.log("failed sending email to :", opt.to)
 				}
 			});
 		}
