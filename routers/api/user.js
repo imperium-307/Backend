@@ -221,8 +221,8 @@ router.post('/reset', (req, res, next) => {
 
 				transporter.sendMail(opt, function(err, r){
 					if (err) {
-													console.log(err)
-													console.log("failed sending email to :", opt.to)
+						console.log(err)
+						console.log("failed sending email to :", opt.to)
 					}
 				});
 
