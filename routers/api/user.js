@@ -763,6 +763,7 @@ router.post('/create-job', (req, res, next) => {
 						emailNotifications: true,
 						desktopNotifications: true,
 						favoriteNotifications: true,
+						chatNotifications: true,
 						id: u.lastJob,
 					}
 
@@ -1059,6 +1060,61 @@ router.post('/message', (req, res) => {
 		var people = [iam || req.token.email, recipient];
 		people.sort()
 		var peopleString = people.join('*');
+
+		if (iam) {
+			// Message to user
+			users.where('email', '==', recipient).get()
+				.then(snapshot => {
+					snapshot.forEach(doc => {
+						u = doc.data();
+						if (u.chatNotifications) {
+							opt = {
+								from: 'imperium397@gmail.com',
+								to: u.email,
+								subject: 'You have a new chat message!',
+								text: 'You just got a new chat message from ' + iam + '!\nThe message said: ' + message.text
+							}
+
+							transporter.sendMail(opt, function(err, r){
+								if (err) {
+									console.log(err)
+									console.log("failed sending email to :", opt.to)
+								}
+							});
+						}
+					});
+				})
+				.catch(err => {
+					console.log(err)
+				});
+
+		} else {
+			// Sending email to employer
+			jobs.where('email', '==', recipient).get()
+				.then(snapshot => {
+					snapshot.forEach(doc => {
+						j = doc.data();
+						if (j.chatNotifications) {
+							opt = {
+								from: 'imperium397@gmail.com',
+								to: j.creator,
+								subject: 'You have a new chat message!',
+								text: 'You just got a new chat message from ' + req.token.email + ' to the posting ' + j.jobName + '!\nThe message said: ' + message.text
+							}
+
+							transporter.sendMail(opt, function(err, r){
+								if (err) {
+									console.log(err)
+									console.log("failed sending email to :", opt.to)
+								}
+							});
+						}
+					});
+				})
+				.catch(err => {
+					console.log(err)
+				});
+		}
 
 		messages.where('id', '==', peopleString).get()
 			.then(snapshot => {
