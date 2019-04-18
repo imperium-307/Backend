@@ -724,6 +724,7 @@ router.post('/post-view', (req, res, next) => {
 })
 
 router.post('/create-job', (req, res, next) => {
+	console.log(req.token, req.body.token)
 	if (req.token != null) {
 		users.where('email', '==', req.token.email).get()
 			.then(snapshot => {
@@ -756,7 +757,7 @@ router.post('/create-job', (req, res, next) => {
 						location: req.body.location,
 						creator: req.token.email,
 						email: req.token.email + "-" + u.lastJob,
-						photo: u.photo,
+						photo: u.photo || "",
 						wage: req.body.wage,
 						start: req.body.start,
 						end: req.body.end,
@@ -1075,6 +1076,7 @@ router.post('/message', (req, res) => {
 								text: 'You just got a new chat message from ' + iam + '!\nThe message said: ' + message.text
 							}
 
+			console.log(u.email)
 							transporter.sendMail(opt, function(err, r){
 								if (err) {
 									console.log(err)
@@ -1141,6 +1143,8 @@ router.post('/message', (req, res) => {
 			});
 
 	} else {
+		console.log("no tok")
+		console.log(req.body.token)
 		return res.status(401).json({err: "unauthorized"})
 	}
 })
